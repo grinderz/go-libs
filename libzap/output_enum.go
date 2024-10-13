@@ -1,8 +1,11 @@
-package logging
+package libzap
 
 import (
-	"fmt"
 	"strings"
+
+	"go.uber.org/zap"
+
+	"github.com/grinderz/go-libs/libzap/zerr"
 )
 
 //go:generate go run golang.org/x/tools/cmd/stringer -type=OutputEnum -linecomment -output output_enum_string.go
@@ -18,9 +21,7 @@ const (
 func (e *OutputEnum) SetValue(value string) error {
 	output := OutputFromString(value)
 	if output == OutputUnknown {
-		return &OutputValueError{
-			Value: value,
-		}
+		return newOutputValueError(value)
 	}
 
 	*e = output
@@ -30,9 +31,7 @@ func (e *OutputEnum) SetValue(value string) error {
 
 func (e OutputEnum) MarshalText() ([]byte, error) {
 	if e == OutputUnknown {
-		return nil, &OutputValueError{
-			Value: OutputUnknown.String(),
-		}
+		return nil, newOutputValueError(e.String())
 	}
 
 	return []byte(e.String()), nil
@@ -55,10 +54,16 @@ func OutputFromString(value string) OutputEnum {
 	}
 }
 
-type OutputValueError struct {
-	Value string
+type outputValueError struct {
+	value string
 }
 
-func (e *OutputValueError) Error() string {
-	return fmt.Sprintf("output invalid value: %s", e.Value)
+func (e *outputValueError) Error() string {
+	return "output invalid value: " + e.value
+}
+
+func newOutputValueError(value string) error {
+	return zerr.Wrap(&outputValueError{
+		value: value,
+	}, zap.String("output", value))
 }

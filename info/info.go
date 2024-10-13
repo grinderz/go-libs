@@ -11,13 +11,13 @@ import (
 var (
 	version = "unknown"
 
-	gitCommit  = "unknown" //nolint:gochecknoglobals
-	buildDate  = "1970-01-01T00:00:00Z"
-	goOS       = "unknown"             //nolint:gochecknoglobals
-	goArch     = "unknown"             //nolint:gochecknoglobals//nolint:gochecknoglobals
-	goVersion  = runtime.Version()     //nolint:gochecknoglobals
-	goMaxProcs = runtime.GOMAXPROCS(0) //nolint:gochecknoglobals
-	numCPU     = runtime.NumCPU()      //nolint:gochecknoglobals
+	gitCommit  = "unknown"              //nolint:gochecknoglobals
+	buildDate  = "1970-01-01T00:00:00Z" //nolint:gochecknoglobals
+	goOS       = "unknown"              //nolint:gochecknoglobals
+	goArch     = "unknown"              //nolint:gochecknoglobals//nolint:gochecknoglobals
+	goVersion  = runtime.Version()      //nolint:gochecknoglobals
+	goMaxProcs = runtime.GOMAXPROCS(0)  //nolint:gochecknoglobals
+	numCPU     = runtime.NumCPU()       //nolint:gochecknoglobals
 
 )
 
@@ -29,7 +29,7 @@ type Info struct {
 	GoArch     string `json:"go_arch"`
 	GoVersion  string `json:"go_version"`
 	GoMaxProcs int    `json:"go_max_procs"`
-	NumCPU     int    `json:"go_num_cpu"`
+	NumCPU     int    `json:"num_cpu"`
 }
 
 var (

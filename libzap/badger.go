@@ -1,4 +1,4 @@
-package logging
+package libzap
 
 import (
 	"fmt"
@@ -9,10 +9,10 @@ import (
 var badgerCallerSkip = 2 //nolint:gochecknoglobals
 
 type badger interface {
-	Errorf(string, ...interface{})
-	Warningf(string, ...interface{})
-	Infof(string, ...interface{})
-	Debugf(string, ...interface{})
+	Errorf(s string, i ...interface{})
+	Warningf(s string, i ...interface{})
+	Infof(s string, i ...interface{})
+	Debugf(s string, i ...interface{})
 }
 
 type BadgerLogger struct {
@@ -21,7 +21,7 @@ type BadgerLogger struct {
 
 func NewBadgerLogger(log *zap.Logger) *BadgerLogger {
 	return &BadgerLogger{
-		log: log.WithOptions(zap.AddCallerSkip(badgerCallerSkip)).With(ZapFieldPkg("badger")),
+		log: log.WithOptions(zap.AddCallerSkip(badgerCallerSkip)).With(FieldPkg("badger")),
 	}
 }
 

@@ -1,4 +1,4 @@
-package logging
+package libzap
 
 import (
 	"fmt"
@@ -8,9 +8,11 @@ import (
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	"github.com/grinderz/go-libs/libzap/zerr"
 )
 
-var Zap *zap.Logger //nolint:gochecknoglobals
+var Logger *zap.Logger //nolint:gochecknoglobals
 
 func New(appID string, cfg *Config) (*zap.Logger, error) {
 	var (
@@ -29,8 +31,15 @@ func New(appID string, cfg *Config) (*zap.Logger, error) {
 		presetCfg = &cfg.Production
 	}
 
-	zcfg.DisableCaller = !presetCfg.EnableCaller
+	zcfg.DisableCaller = presetCfg.DisableCaller
 	zcfg.DisableStacktrace = presetCfg.DisableStacktrace
+	zcfg.Encoding = presetCfg.Encoding.String()
+	zcfg.Development = presetCfg.Development
+	zcfg.EncoderConfig.SkipLineEnding = presetCfg.SkipLineEnding
+	zcfg.EncoderConfig.LineEnding = presetCfg.LineEnding
+	zcfg.EncoderConfig.ConsoleSeparator = presetCfg.ConsoleSeparator
+
+	parseKeys(presetCfg, &zcfg)
 
 	if err := parseLevel(presetCfg, &zcfg); err != nil {
 		return nil, err
@@ -48,6 +57,10 @@ func New(appID string, cfg *Config) (*zap.Logger, error) {
 		return nil, err
 	}
 
+	if err := parseCallerEncoder(presetCfg, &zcfg); err != nil {
+		return nil, err
+	}
+
 	if err := parseOutputs(appID, presetCfg, &zcfg); err != nil {
 		return nil, err
 	}
@@ -57,7 +70,7 @@ func New(appID string, cfg *Config) (*zap.Logger, error) {
 
 func Setup(appID string, cfg *Config) {
 	if cfg == nil {
-		panic("empty logger config")
+		panic("empty zap config")
 	}
 
 	zp, err := New(appID, cfg)
@@ -65,7 +78,7 @@ func Setup(appID string, cfg *Config) {
 		panic(err)
 	}
 
-	Zap = zp
+	Logger = zp
 }
 
 func parseLevel(presetCfg *PresetConfig, zcfg *zap.Config) error {
@@ -75,7 +88,10 @@ func parseLevel(presetCfg *PresetConfig, zcfg *zap.Config) error {
 
 	lvl, err := zap.ParseAtomicLevel(presetCfg.Level)
 	if err != nil {
-		return fmt.Errorf("parse log level failed: %w", err)
+		return zerr.Wrap(
+			fmt.Errorf("parse log level: %w", err),
+			zap.String("level", presetCfg.Level),
+		)
 	}
 
 	zcfg.Level = lvl
@@ -91,7 +107,10 @@ func parseLevelEncoder(presetCfg *PresetConfig, zcfg *zap.Config) error {
 	var lvlEncoder zapcore.LevelEncoder
 
 	if err := lvlEncoder.UnmarshalText([]byte(presetCfg.LevelEncoder)); err != nil {
-		return fmt.Errorf("parse log level encoder failed: %w", err)
+		return zerr.Wrap(
+			fmt.Errorf("parse log level encoder: %w", err),
+			zap.String("level_encoder", presetCfg.LevelEncoder),
+		)
 	}
 
 	zcfg.EncoderConfig.EncodeLevel = lvlEncoder
@@ -104,7 +123,10 @@ func parseTimeEncoder(presetCfg *PresetConfig, zcfg *zap.Config) error {
 		var tsEncoder zapcore.TimeEncoder
 
 		if err := tsEncoder.UnmarshalText([]byte(presetCfg.TimeEncoder)); err != nil {
-			return fmt.Errorf("parse log time encoder failed: %w", err)
+			return zerr.Wrap(
+				fmt.Errorf("parse log time encoder: %w", err),
+				zap.String("time_encoder", presetCfg.TimeEncoder),
+			)
 		}
 
 		zcfg.EncoderConfig.EncodeTime = tsEncoder
@@ -123,10 +145,32 @@ func parseDurationEncoder(presetCfg *PresetConfig, zcfg *zap.Config) error {
 	var durEncoder zapcore.DurationEncoder
 
 	if err := durEncoder.UnmarshalText([]byte(presetCfg.DurationEncoder)); err != nil {
-		return fmt.Errorf("parse log duration encoder failed: %w", err)
+		return zerr.Wrap(
+			fmt.Errorf("parse log duration encoder: %w", err),
+			zap.String("duration_encoder", presetCfg.DurationEncoder),
+		)
 	}
 
 	zcfg.EncoderConfig.EncodeDuration = durEncoder
+
+	return nil
+}
+
+func parseCallerEncoder(presetCfg *PresetConfig, zcfg *zap.Config) error {
+	if len(presetCfg.CallerEncoder) == 0 {
+		return nil
+	}
+
+	var callerEncoder zapcore.CallerEncoder
+
+	if err := callerEncoder.UnmarshalText([]byte(presetCfg.CallerEncoder)); err != nil {
+		return zerr.Wrap(
+			fmt.Errorf("parse log caller encoder: %w", err),
+			zap.String("caller_encoder", presetCfg.CallerEncoder),
+		)
+	}
+
+	zcfg.EncoderConfig.EncodeCaller = callerEncoder
 
 	return nil
 }
@@ -172,7 +216,7 @@ func parseFileOutput(appID string, presetCfg *PresetConfig, zcfg *zap.Config) er
 	if filepath.IsLocal(presetCfg.OutputFile.Dir) {
 		cwd, err := os.Getwd()
 		if err != nil {
-			return fmt.Errorf("failed to detect working directory: %w", err)
+			return fmt.Errorf("detect working directory: %w", err)
 		}
 
 		dir = filepath.Join(cwd, presetCfg.OutputFile.Dir)
@@ -190,4 +234,16 @@ func parseFileOutput(appID string, presetCfg *PresetConfig, zcfg *zap.Config) er
 	}
 
 	return nil
+}
+
+func parseKeys(presetCfg *PresetConfig, zcfg *zap.Config) {
+	if presetCfg.Encoding == EncodingJSON {
+		zcfg.EncoderConfig.TimeKey = presetCfg.JSONTimeKey
+		zcfg.EncoderConfig.MessageKey = presetCfg.JSONMessageKey
+		zcfg.EncoderConfig.StacktraceKey = presetCfg.JSONStacktraceKey
+		zcfg.EncoderConfig.CallerKey = presetCfg.JSONCallerKey
+		zcfg.EncoderConfig.LevelKey = presetCfg.JSONLevelKey
+		zcfg.EncoderConfig.FunctionKey = presetCfg.JSONFunctionKey
+		zcfg.EncoderConfig.NameKey = presetCfg.JSONNameKey
+	}
 }

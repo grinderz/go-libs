@@ -22,7 +22,7 @@ func findZeroFooterSize(inFile *os.File, buffSize int) (int64, error) {
 
 	for {
 		if readBytes, err = inFile.Read(buff); err != nil && err != io.EOF {
-			return 0, fmt.Errorf("read file failed: %w", err)
+			return 0, fmt.Errorf("read file: %w", err)
 		}
 
 		totalRead += int64(readBytes)
@@ -30,11 +30,12 @@ func findZeroFooterSize(inFile *os.File, buffSize int) (int64, error) {
 		for _, b := range buff {
 			if b != zeroByte {
 				if _, err := inFile.Seek(-totalRead+index, 1); err != nil {
-					return 0, fmt.Errorf("file seek failed: %w", err)
+					return 0, fmt.Errorf("file seek: %w", err)
 				}
 
 				return index, nil
 			}
+
 			index++
 		}
 
@@ -55,7 +56,7 @@ func findTrailer(file *os.File) (int64, error) {
 	for {
 		hdr, err = rdr.Next()
 		if err != nil {
-			return 0, fmt.Errorf("cpio reader failed: %w", err)
+			return 0, fmt.Errorf("cpio reader: %w", err)
 		}
 
 		if hdr.Name == "TRAILER!!!" {
@@ -64,7 +65,7 @@ func findTrailer(file *os.File) (int64, error) {
 	}
 
 	if _, err := file.Seek(0, 0); err != nil {
-		return 0, fmt.Errorf("cpio seek failed: %w", err)
+		return 0, fmt.Errorf("cpio seek: %w", err)
 	}
 
 	return rdr.Pos(), nil
@@ -72,7 +73,7 @@ func findTrailer(file *os.File) (int64, error) {
 
 func cut(dst io.Writer, src *os.File) error {
 	if _, err := src.Seek(0, 0); err != nil {
-		return fmt.Errorf("src seek failed: %w", err)
+		return fmt.Errorf("src seek: %w", err)
 	}
 
 	i, err := findTrailer(src)
@@ -81,7 +82,7 @@ func cut(dst io.Writer, src *os.File) error {
 	}
 
 	if _, err = io.CopyN(dst, src, i); err != nil {
-		return fmt.Errorf("CopyN failed: %w", err)
+		return fmt.Errorf("CopyN: %w", err)
 	}
 
 	return nil
@@ -89,11 +90,11 @@ func cut(dst io.Writer, src *os.File) error {
 
 func WriteHeader(dst io.Writer, reader io.Reader, footerSize int64) error {
 	if _, err := io.Copy(dst, reader); err != nil {
-		return fmt.Errorf("stream copy failed: %w", err)
+		return fmt.Errorf("stream copy: %w", err)
 	}
 
 	if _, err := dst.Write(make([]byte, footerSize)); err != nil {
-		return fmt.Errorf("write to writer failed: %w", err)
+		return fmt.Errorf("write to writer: %w", err)
 	}
 
 	return nil

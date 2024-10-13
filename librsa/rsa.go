@@ -20,7 +20,7 @@ func MarshalPublicKey(pubKey *rsa.PublicKey) ([]byte, []byte) {
 	n := pubKey.N.Bytes()
 	e := make([]byte, unsafe.Sizeof(uint32(0)))
 
-	binary.BigEndian.PutUint32(e, uint32(pubKey.E))
+	binary.BigEndian.PutUint32(e, uint32(pubKey.E)) //nolint:gosec
 
 	return n, e
 }

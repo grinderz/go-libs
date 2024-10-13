@@ -1,14 +1,38 @@
 ---
 run:
-  go: "1.21"
+  go: "1.23"
   issues-exit-code: 1
   skip-dirs-use-default: true
   allow-parallel-runners: false
 
 output:
-  # colored-line-number|line-number|json|tab|checkstyle|code-climate|junit-xml|github-actions
-  # default is "colored-line-number"
-  format: colored-line-number
+  # The formats used to render issues.
+  # Formats:
+  # - `colored-line-number`
+  # - `line-number`
+  # - `json`
+  # - `colored-tab`
+  # - `tab`
+  # - `html`
+  # - `checkstyle`
+  # - `code-climate`
+  # - `junit-xml`
+  # - `github-actions`
+  # - `teamcity`
+  # - `sarif`
+  # Output path can be either `stdout`, `stderr` or path to the file to write to.
+  #
+  # For the CLI flag (`--out-format`), multiple formats can be specified by separating them by comma.
+  # The output can be specified for each of them by separating format name and path by colon symbol.
+  # Example: "--out-format=checkstyle:report.xml,json:stdout,colored-line-number"
+  # The CLI flag (`--out-format`) override the configuration file.
+  #
+  # Default:
+  #   formats:
+  #     - format: colored-line-number
+  #       path: stdout
+  formats:
+    - format: colored-line-number
 
   # print lines of code with issue, default is true
   print-issued-lines: true
@@ -43,6 +67,7 @@ linters:
     - containedctx
     - contextcheck
     - decorder
+    #    - depguard
     - dogsled
     - dupl
     - dupword
@@ -50,14 +75,13 @@ linters:
     - errchkjson
     - errname
     - errorlint
-    - execinquery
     - exhaustive
-    - exportloopref
+    - copyloopvar
     - forbidigo
     - goconst
     - gocritic
     - godot
-    - goerr113
+    - err113
     - gofmt
     - goimports
     - gomoddirectives
@@ -120,7 +144,7 @@ linters-settings:
     line-length: 120
   wrapcheck:
     ignorePackageGlobs:
-      - github.com/grinderz/grgo/*
+      - github.com/grinderz/go-libs/*
       - github.com/sethvargo/*
   tagliatelle:
     case:
@@ -153,6 +177,9 @@ linters-settings:
     # If lower than 0, disable the check.
     # Default: 60
     lines: 120
+  dupl:
+    # tokens count to trigger issue, 150 by default
+    threshold: 250
   tagalign:
     # Align and sort can be used together or separately.
     #

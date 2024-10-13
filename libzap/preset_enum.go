@@ -1,8 +1,11 @@
-package logging
+package libzap
 
 import (
-	"fmt"
 	"strings"
+
+	"go.uber.org/zap"
+
+	"github.com/grinderz/go-libs/libzap/zerr"
 )
 
 //go:generate go run golang.org/x/tools/cmd/stringer -type=PresetEnum -linecomment -output preset_enum_string.go
@@ -17,9 +20,7 @@ const (
 func (e *PresetEnum) SetValue(value string) error {
 	preset := PresetFromString(value)
 	if preset == PresetUnknown {
-		return &PresetValueError{
-			Value: value,
-		}
+		return newPresetValueError(value)
 	}
 
 	*e = preset
@@ -29,9 +30,7 @@ func (e *PresetEnum) SetValue(value string) error {
 
 func (e PresetEnum) MarshalText() ([]byte, error) {
 	if e == PresetUnknown {
-		return nil, &PresetValueError{
-			Value: PresetUnknown.String(),
-		}
+		return nil, newPresetValueError(e.String())
 	}
 
 	return []byte(e.String()), nil
@@ -52,10 +51,16 @@ func PresetFromString(value string) PresetEnum {
 	}
 }
 
-type PresetValueError struct {
-	Value string
+type presetValueError struct {
+	value string
 }
 
-func (e *PresetValueError) Error() string {
-	return fmt.Sprintf("preset invalid value: %s", e.Value)
+func (e *presetValueError) Error() string {
+	return "preset invalid value: " + e.value
+}
+
+func newPresetValueError(value string) error {
+	return zerr.Wrap(&presetValueError{
+		value: value,
+	}, zap.String("preset", value))
 }

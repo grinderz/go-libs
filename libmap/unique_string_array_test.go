@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/grinderz/grgo/libmap"
+	"github.com/grinderz/go-libs/libmap"
 )
 
 func TestUniqueStringArray(t *testing.T) {

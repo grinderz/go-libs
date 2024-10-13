@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"go.uber.org/zap"
+
+	"github.com/grinderz/go-libs/libzap/zerr"
 )
 
 const MaxMagicSize = 6
@@ -36,9 +40,7 @@ const (
 func (ht *HeaderTypeEnum) SetValue(value string) error {
 	headerType := HeaderTypeFromString(value)
 	if headerType == HeaderTypeUnknown {
-		return &HeaderTypeValueError{
-			Value: value,
-		}
+		return NewHeaderTypeValueError(value)
 	}
 
 	*ht = headerType
@@ -48,9 +50,7 @@ func (ht *HeaderTypeEnum) SetValue(value string) error {
 
 func (ht HeaderTypeEnum) MarshalText() ([]byte, error) {
 	if ht == HeaderTypeUnknown {
-		return nil, &HeaderTypeValueError{
-			Value: HeaderTypeUnknown.String(),
-		}
+		return nil, NewHeaderTypeValueError(ht.String())
 	}
 
 	return []byte(ht.String()), nil
@@ -76,7 +76,7 @@ func HeaderTypeFromString(value string) HeaderTypeEnum {
 func HeaderTypeFromReader(r io.Reader) (HeaderTypeEnum, error) {
 	buff := make([]byte, MaxMagicSize)
 	if _, err := io.ReadFull(r, buff); err != nil {
-		return HeaderTypeUnknown, fmt.Errorf("read reader failed: %w", err)
+		return HeaderTypeUnknown, fmt.Errorf("read reader: %w", err)
 	}
 
 	if bytes.Equal(buff, cpioMagic) {
@@ -91,23 +91,33 @@ func HeaderTypeFromReader(r io.Reader) (HeaderTypeEnum, error) {
 		return HeaderTypeGZ, nil
 	}
 
-	return HeaderTypeUnknown, &HeaderTypeUnsupportedFormatError{
-		Format: buff,
-	}
+	return HeaderTypeUnknown, newHeaderTypeUnsupportedFormatError(buff)
 }
 
-type HeaderTypeValueError struct {
-	Value string
+type headerTypeValueError struct {
+	value string
 }
 
-func (e *HeaderTypeValueError) Error() string {
-	return fmt.Sprintf("cpio header type invalid value: %s", e.Value)
+func (e *headerTypeValueError) Error() string {
+	return "cpio header type invalid value: " + e.value
 }
 
-type HeaderTypeUnsupportedFormatError struct {
-	Format []byte
+func NewHeaderTypeValueError(value string) error {
+	return zerr.Wrap(&headerTypeValueError{
+		value: value,
+	}, zap.String("header_type", value))
 }
 
-func (e *HeaderTypeUnsupportedFormatError) Error() string {
-	return fmt.Sprintf("cpio header unsupported format %x", e.Format)
+type headerTypeUnsupportedFormatError struct {
+	format []byte
+}
+
+func (e *headerTypeUnsupportedFormatError) Error() string {
+	return fmt.Sprintf("cpio header unsupported format %x", e.format)
+}
+
+func newHeaderTypeUnsupportedFormatError(format []byte) error {
+	return zerr.Wrap(&headerTypeUnsupportedFormatError{
+		format: format,
+	}, zap.ByteString("format", format))
 }

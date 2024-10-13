@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"go.uber.org/zap"
+
+	"github.com/grinderz/go-libs/libzap/zerr"
 )
 
 type Pattern struct {
@@ -34,14 +38,17 @@ func ReplaceBytes(file *os.File, offsets []int64, replace []byte) (int, error) {
 	for _, offset := range offsets {
 		replaced, err := file.WriteAt(replace, offset)
 		if err != nil {
-			return 0, fmt.Errorf("patching file failed: %w", err)
+			return 0, zerr.Wrap(
+				fmt.Errorf("patching file: %w", err),
+				zap.Int64("offset", offset),
+			)
 		}
 
 		totalReplaced += replaced
 	}
 
 	if err := file.Sync(); err != nil {
-		return 0, fmt.Errorf("patched file sync failed: %w", err)
+		return 0, fmt.Errorf("patched file sync: %w", err)
 	}
 
 	return totalReplaced, nil
@@ -63,7 +70,7 @@ func SearchBytes(f io.Reader, find []byte, buffSize int, resultCap int) ([]int64
 
 	for {
 		if readCounter, err = reader.Read(buff); err != nil && err != io.EOF {
-			return nil, fmt.Errorf("read buffer failed: %w", err)
+			return nil, fmt.Errorf("read buffer: %w", err)
 		}
 
 		for ind, b := range buff {

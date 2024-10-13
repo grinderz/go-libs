@@ -7,7 +7,7 @@ import (
 	"crypto/rsa"
 	"testing"
 
-	"github.com/grinderz/grgo/librsa"
+	"github.com/grinderz/go-libs/librsa"
 )
 
 func TestRsa(t *testing.T) {

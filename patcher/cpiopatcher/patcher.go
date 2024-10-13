@@ -7,9 +7,10 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/grinderz/grgo/libio"
-	"github.com/grinderz/grgo/patcher"
-	"github.com/grinderz/grgo/patcher/cpiopatcher/libcpio"
+	"github.com/grinderz/go-libs/libio"
+	"github.com/grinderz/go-libs/libzap/zerr"
+	"github.com/grinderz/go-libs/patcher"
+	"github.com/grinderz/go-libs/patcher/cpiopatcher/libcpio"
 )
 
 const (
@@ -50,42 +51,92 @@ func (p *Patcher) Patch(patterns []*patcher.Pattern, backup bool) {
 
 	fileType, err := libcpio.HeaderTypeFromReader(inFile)
 	if err != nil {
-		p.result <- patcher.NewError(p.path, err)
+		p.result <- patcher.NewError(
+			p.path,
+			err,
+		)
+
 		return
 	}
 
 	if fileType == libcpio.HeaderTypeCPIO {
-		p.logger.Info(fmt.Sprintf("%s: cut cpio header", p.path))
+		p.logger.Info(
+			p.path+": cut cpio header",
+			zap.String("path", p.path),
+			zap.String("file_type", fileType.String()),
+		)
 
-		cpioFile, err := os.Create(filepath.Join(p.tempDir, fmt.Sprintf("%s.cpio", p.fileName)))
+		cpioFilePath := filepath.Join(p.tempDir, p.fileName+".cpio")
+
+		cpioFile, err := os.Create(cpioFilePath)
 		if err != nil {
-			p.result <- patcher.NewError(p.path, fmt.Errorf("create cpio file failed: %w", err))
+			p.result <- patcher.NewError(
+				p.path,
+				zerr.Wrap(
+					fmt.Errorf("create cpio file: %w", err),
+					zap.String("cpio_path", cpioFilePath),
+					zap.String("file_type", fileType.String()),
+				),
+			)
+
 			return
 		}
 
 		defer cpioFile.Close()
 
 		if fileType, p.cpioZeroFooterSize, err = libcpio.CutHeader(inFile, cpioFile, bufferSize); err != nil {
-			p.result <- patcher.NewError(p.path, err)
+			p.result <- patcher.NewError(
+				p.path,
+				zerr.Wrap(
+					err,
+					zap.String("cpio_path", cpioFilePath),
+				),
+			)
+
 			return
 		}
 	}
 
-	if rawFile, err = os.Create(filepath.Join(p.tempDir, fmt.Sprintf("%s.raw", p.fileName))); err != nil {
-		p.result <- patcher.NewError(p.path, err)
+	rawFilePath := filepath.Join(p.tempDir, p.fileName+".raw")
+	if rawFile, err = os.Create(rawFilePath); err != nil {
+		p.result <- patcher.NewError(
+			p.path,
+			zerr.Wrap(
+				err,
+				zap.String("file_type", fileType.String()),
+				zap.String("raw_path", rawFilePath),
+			),
+		)
+
 		return
 	}
 
 	defer rawFile.Close()
 
 	if err := p.unpack(rawFile, inFile, fileType); err != nil {
-		p.result <- patcher.NewError(p.path, err)
+		p.result <- patcher.NewError(
+			p.path,
+			zerr.Wrap(
+				err,
+				zap.String("file_type", fileType.String()),
+				zap.String("raw_path", rawFilePath),
+			),
+		)
+
 		return
 	}
 
 	replaced, err := p.patch(rawFile, patterns)
 	if err != nil {
-		p.result <- patcher.NewError(p.path, err)
+		p.result <- patcher.NewError(
+			p.path,
+			zerr.Wrap(
+				err,
+				zap.String("file_type", fileType.String()),
+				zap.String("raw_path", rawFilePath),
+			),
+		)
+
 		return
 	}
 
@@ -95,7 +146,15 @@ func (p *Patcher) Patch(patterns []*patcher.Pattern, backup bool) {
 	}
 
 	if err := p.pack(rawFile, inFile, cpioFile, backup); err != nil {
-		p.result <- patcher.NewError(p.path, err)
+		p.result <- patcher.NewError(
+			p.path,
+			zerr.Wrap(
+				err,
+				zap.String("file_type", fileType.String()),
+				zap.String("raw_path", rawFilePath),
+			),
+		)
+
 		return
 	}
 
@@ -103,37 +162,46 @@ func (p *Patcher) Patch(patterns []*patcher.Pattern, backup bool) {
 }
 
 func (p *Patcher) backup(inFile *os.File) error {
-	p.logger.Info(fmt.Sprintf("%s: backup", p.path))
+	p.logger.Info(
+		p.path+": backup",
+		zap.String("path", p.path),
+	)
 
 	if _, err := inFile.Seek(0, 0); err != nil {
-		return fmt.Errorf("file seek failed: %w", err)
+		return fmt.Errorf("file seek: %w", err)
 	}
 
-	return libio.CloneReader(inFile, fmt.Sprintf("%s.bak", p.path))
+	return libio.CloneReader(inFile, p.path+".bak")
 }
 
 func (p *Patcher) unpack(rawFile, inFile *os.File, fileType libcpio.HeaderTypeEnum) error {
 	if _, err := inFile.Seek(-libcpio.MaxMagicSize, 1); err != nil {
-		return fmt.Errorf("in file seek failed: %w", err)
+		return fmt.Errorf("in file seek: %w", err)
 	}
 
 	switch fileType {
 	case libcpio.HeaderTypeXZ:
-		p.logger.Info(fmt.Sprintf("%s: unpack xz", p.path))
+		p.logger.Info(
+			p.path+": unpack xz",
+			zap.String("path", p.path),
+			zap.String("file_type", fileType.String()),
+		)
 
 		if err := libio.UnpackXZ(rawFile, inFile); err != nil {
 			return err
 		}
 	case libcpio.HeaderTypeGZ:
-		p.logger.Info(fmt.Sprintf("%s: unpack gz", p.path))
+		p.logger.Info(
+			p.path+": unpack gz",
+			zap.String("path", p.path),
+			zap.String("file_type", fileType.String()),
+		)
 
 		if err := libio.UnpackGZ(rawFile, inFile, maxDecompressBytes); err != nil {
 			return err
 		}
 	case libcpio.HeaderTypeCPIO, libcpio.HeaderTypeUnknown:
-		return &libcpio.HeaderTypeValueError{
-			Value: fileType.String(),
-		}
+		return libcpio.NewHeaderTypeValueError(fileType.String())
 	}
 
 	return nil
@@ -143,38 +211,58 @@ func (p *Patcher) patch(rawFile *os.File, patterns []*patcher.Pattern) (int, err
 	var replaced int
 
 	for patternIndex, pattern := range patterns {
-		p.logger.Info(fmt.Sprintf("%s: search %d [%s]", p.path, patternIndex, pattern.Description))
+		p.logger.Info(
+			fmt.Sprintf("%s: search %d [%s]", p.path, patternIndex, pattern.Description),
+			zap.String("path", p.path),
+			zap.Int("pattern_index", patternIndex),
+			zap.String("pattern", pattern.Description),
+		)
 
 		if _, err := rawFile.Seek(0, 0); err != nil {
-			return 0, fmt.Errorf("raw seek failed: %w", err)
+			return 0, zerr.Wrap(
+				fmt.Errorf("raw seek: %w", err),
+				zap.Int("pattern_index", patternIndex),
+				zap.String("pattern", pattern.Description),
+			)
 		}
 
 		offsets, err := patcher.SearchBytes(rawFile, pattern.Search, bufferSize, pattern.Count)
 		if err != nil {
-			return 0, err
+			return 0, zerr.Wrap(
+				err,
+				zap.Int("pattern_index", patternIndex),
+				zap.String("pattern", pattern.Description),
+			)
 		}
 
 		if len(offsets) == 0 {
-			return 0, &PatternNotFoundError{
-				Path:         p.path,
-				PatternIndex: patternIndex,
-			}
+			return 0, zerr.Wrap(
+				newPatternNotFoundError(p.path, patternIndex),
+				zap.String("pattern", pattern.Description),
+			)
 		}
 
 		if len(offsets) != pattern.Count {
-			return 0, &InvalidOffsetsLengthError{
-				Path:          p.path,
-				PatternIndex:  patternIndex,
-				PatternsCount: pattern.Count,
-				OffsetsLength: len(offsets),
-			}
+			return 0, zerr.Wrap(
+				newInvalidOffsetsLengthError(p.path, patternIndex, pattern.Count, len(offsets)),
+				zap.String("pattern", pattern.Description),
+			)
 		}
 
-		p.logger.Info(fmt.Sprintf("%s: patch %d", p.path, patternIndex))
+		p.logger.Info(
+			fmt.Sprintf("%s: patch %d", p.path, patternIndex),
+			zap.String("path", p.path),
+			zap.Int("pattern_index", patternIndex),
+			zap.String("pattern", pattern.Description),
+		)
 
 		rbs, err := patcher.ReplaceBytes(rawFile, offsets, pattern.Replace)
 		if err != nil {
-			return 0, err
+			return 0, zerr.Wrap(
+				err,
+				zap.Int("pattern_index", patternIndex),
+				zap.String("pattern", pattern.Description),
+			)
 		}
 
 		replaced += rbs
@@ -191,20 +279,20 @@ func (p *Patcher) pack(rawFile, inFile, cpioFile *os.File, backup bool) error {
 	}
 
 	if _, err := rawFile.Seek(0, 0); err != nil {
-		return fmt.Errorf("raw file seek failed: %w", err)
+		return fmt.Errorf("raw file seek: %w", err)
 	}
 
 	if _, err := inFile.Seek(0, 0); err != nil {
-		return fmt.Errorf("in file seek failed: %w", err)
+		return fmt.Errorf("in file seek: %w", err)
 	}
 
 	if err := inFile.Truncate(0); err != nil {
-		return fmt.Errorf("in file truncate failed: %w", err)
+		return fmt.Errorf("in file truncate: %w", err)
 	}
 
 	if cpioFile != nil {
 		if _, err := cpioFile.Seek(0, 0); err != nil {
-			return fmt.Errorf("cpio file seek failed: %w", err)
+			return fmt.Errorf("cpio file seek: %w", err)
 		}
 
 		if err := libcpio.WriteHeader(inFile, cpioFile, p.cpioZeroFooterSize); err != nil {
@@ -212,7 +300,10 @@ func (p *Patcher) pack(rawFile, inFile, cpioFile *os.File, backup bool) error {
 		}
 	}
 
-	p.logger.Info(fmt.Sprintf("%s: pack gz", p.path))
+	p.logger.Info(
+		p.path+": pack gz",
+		zap.String("path", p.path),
+	)
 
 	return libio.PackGZ(inFile, rawFile)
 }

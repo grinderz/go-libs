@@ -1,11 +1,11 @@
-package logging
+package libzap
 
 import (
 	"context"
 
 	"go.uber.org/zap"
 
-	"github.com/grinderz/grgo/libctx"
+	"github.com/grinderz/go-libs/libctx"
 )
 
 var (
