@@ -8,6 +8,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/grinderz/go-libs/liberrors"
 	"github.com/grinderz/go-libs/libzap/zerr"
 )
 
@@ -40,7 +41,7 @@ const (
 func (ht *HeaderTypeEnum) SetValue(value string) error {
 	headerType := HeaderTypeFromString(value)
 	if headerType == HeaderTypeUnknown {
-		return NewHeaderTypeValueError(value)
+		return liberrors.NewInvalidStringEntityError("cpio_header_type", value)
 	}
 
 	*ht = headerType
@@ -50,7 +51,7 @@ func (ht *HeaderTypeEnum) SetValue(value string) error {
 
 func (ht HeaderTypeEnum) MarshalText() ([]byte, error) {
 	if ht == HeaderTypeUnknown {
-		return nil, NewHeaderTypeValueError(ht.String())
+		return nil, liberrors.NewInvalidStringEntityError("cpio_header_type", ht.String())
 	}
 
 	return []byte(ht.String()), nil
@@ -94,20 +95,6 @@ func HeaderTypeFromReader(r io.Reader) (HeaderTypeEnum, error) {
 	return HeaderTypeUnknown, newHeaderTypeUnsupportedFormatError(buff)
 }
 
-type headerTypeValueError struct {
-	value string
-}
-
-func (e *headerTypeValueError) Error() string {
-	return "cpio header type invalid value: " + e.value
-}
-
-func NewHeaderTypeValueError(value string) error {
-	return zerr.Wrap(&headerTypeValueError{
-		value: value,
-	}, zap.String("header_type", value))
-}
-
 type headerTypeUnsupportedFormatError struct {
 	format []byte
 }
@@ -117,7 +104,10 @@ func (e *headerTypeUnsupportedFormatError) Error() string {
 }
 
 func newHeaderTypeUnsupportedFormatError(format []byte) error {
-	return zerr.Wrap(&headerTypeUnsupportedFormatError{
-		format: format,
-	}, zap.ByteString("format", format))
+	return zerr.Wrap(
+		&headerTypeUnsupportedFormatError{
+			format: format,
+		},
+		zap.ByteString("format", format),
+	)
 }

@@ -39,33 +39,38 @@ func New(appID string, cfg *Config) (*zap.Logger, error) {
 	zcfg.EncoderConfig.LineEnding = presetCfg.LineEnding
 	zcfg.EncoderConfig.ConsoleSeparator = presetCfg.ConsoleSeparator
 
-	parseKeys(presetCfg, &zcfg)
+	setKeys(presetCfg, &zcfg)
 
-	if err := parseLevel(presetCfg, &zcfg); err != nil {
-		return nil, err
+	if err := setLevel(presetCfg, &zcfg); err != nil {
+		return nil, fmt.Errorf("set level: %w", err)
 	}
 
-	if err := parseLevelEncoder(presetCfg, &zcfg); err != nil {
-		return nil, err
+	if err := setLevelEncoder(presetCfg, &zcfg); err != nil {
+		return nil, fmt.Errorf("set level encoder: %w", err)
 	}
 
-	if err := parseTimeEncoder(presetCfg, &zcfg); err != nil {
-		return nil, err
+	if err := setTimeEncoder(presetCfg, &zcfg); err != nil {
+		return nil, fmt.Errorf("set time encoder: %w", err)
 	}
 
-	if err := parseDurationEncoder(presetCfg, &zcfg); err != nil {
-		return nil, err
+	if err := setDurationEncoder(presetCfg, &zcfg); err != nil {
+		return nil, fmt.Errorf("set duration encoder: %w", err)
 	}
 
-	if err := parseCallerEncoder(presetCfg, &zcfg); err != nil {
-		return nil, err
+	if err := setCallerEncoder(presetCfg, &zcfg); err != nil {
+		return nil, fmt.Errorf("set caller encoder: %w", err)
 	}
 
-	if err := parseOutputs(appID, presetCfg, &zcfg); err != nil {
-		return nil, err
+	if err := setOutputs(appID, presetCfg, &zcfg); err != nil {
+		return nil, fmt.Errorf("set outputs encoder: %w", err)
 	}
 
-	return zcfg.Build() //nolint:wrapcheck
+	logger, err := zcfg.Build()
+	if err != nil {
+		return nil, fmt.Errorf("build: %w", err)
+	}
+
+	return logger, nil
 }
 
 func Setup(appID string, cfg *Config) {
@@ -81,7 +86,7 @@ func Setup(appID string, cfg *Config) {
 	Logger = zp
 }
 
-func parseLevel(presetCfg *PresetConfig, zcfg *zap.Config) error {
+func setLevel(presetCfg *PresetConfig, zcfg *zap.Config) error {
 	if len(presetCfg.Level) == 0 {
 		return nil
 	}
@@ -89,7 +94,7 @@ func parseLevel(presetCfg *PresetConfig, zcfg *zap.Config) error {
 	lvl, err := zap.ParseAtomicLevel(presetCfg.Level)
 	if err != nil {
 		return zerr.Wrap(
-			fmt.Errorf("parse log level: %w", err),
+			fmt.Errorf("parse atomic level: %w", err),
 			zap.String("level", presetCfg.Level),
 		)
 	}
@@ -99,7 +104,7 @@ func parseLevel(presetCfg *PresetConfig, zcfg *zap.Config) error {
 	return nil
 }
 
-func parseLevelEncoder(presetCfg *PresetConfig, zcfg *zap.Config) error {
+func setLevelEncoder(presetCfg *PresetConfig, zcfg *zap.Config) error {
 	if len(presetCfg.LevelEncoder) == 0 {
 		return nil
 	}
@@ -108,7 +113,7 @@ func parseLevelEncoder(presetCfg *PresetConfig, zcfg *zap.Config) error {
 
 	if err := lvlEncoder.UnmarshalText([]byte(presetCfg.LevelEncoder)); err != nil {
 		return zerr.Wrap(
-			fmt.Errorf("parse log level encoder: %w", err),
+			fmt.Errorf("unmarshal level encoder: %w", err),
 			zap.String("level_encoder", presetCfg.LevelEncoder),
 		)
 	}
@@ -118,13 +123,13 @@ func parseLevelEncoder(presetCfg *PresetConfig, zcfg *zap.Config) error {
 	return nil
 }
 
-func parseTimeEncoder(presetCfg *PresetConfig, zcfg *zap.Config) error {
+func setTimeEncoder(presetCfg *PresetConfig, zcfg *zap.Config) error {
 	if len(presetCfg.TimeEncoder) > 0 {
 		var tsEncoder zapcore.TimeEncoder
 
 		if err := tsEncoder.UnmarshalText([]byte(presetCfg.TimeEncoder)); err != nil {
 			return zerr.Wrap(
-				fmt.Errorf("parse log time encoder: %w", err),
+				fmt.Errorf("unmarshal time encoder: %w", err),
 				zap.String("time_encoder", presetCfg.TimeEncoder),
 			)
 		}
@@ -137,7 +142,7 @@ func parseTimeEncoder(presetCfg *PresetConfig, zcfg *zap.Config) error {
 	return nil
 }
 
-func parseDurationEncoder(presetCfg *PresetConfig, zcfg *zap.Config) error {
+func setDurationEncoder(presetCfg *PresetConfig, zcfg *zap.Config) error {
 	if len(presetCfg.DurationEncoder) == 0 {
 		return nil
 	}
@@ -146,7 +151,7 @@ func parseDurationEncoder(presetCfg *PresetConfig, zcfg *zap.Config) error {
 
 	if err := durEncoder.UnmarshalText([]byte(presetCfg.DurationEncoder)); err != nil {
 		return zerr.Wrap(
-			fmt.Errorf("parse log duration encoder: %w", err),
+			fmt.Errorf("unmarshal duration encoder: %w", err),
 			zap.String("duration_encoder", presetCfg.DurationEncoder),
 		)
 	}
@@ -156,7 +161,7 @@ func parseDurationEncoder(presetCfg *PresetConfig, zcfg *zap.Config) error {
 	return nil
 }
 
-func parseCallerEncoder(presetCfg *PresetConfig, zcfg *zap.Config) error {
+func setCallerEncoder(presetCfg *PresetConfig, zcfg *zap.Config) error {
 	if len(presetCfg.CallerEncoder) == 0 {
 		return nil
 	}
@@ -165,7 +170,7 @@ func parseCallerEncoder(presetCfg *PresetConfig, zcfg *zap.Config) error {
 
 	if err := callerEncoder.UnmarshalText([]byte(presetCfg.CallerEncoder)); err != nil {
 		return zerr.Wrap(
-			fmt.Errorf("parse log caller encoder: %w", err),
+			fmt.Errorf("unmarshal caller encoder: %w", err),
 			zap.String("caller_encoder", presetCfg.CallerEncoder),
 		)
 	}
@@ -175,7 +180,7 @@ func parseCallerEncoder(presetCfg *PresetConfig, zcfg *zap.Config) error {
 	return nil
 }
 
-func parseOutputs(appID string, presetCfg *PresetConfig, zcfg *zap.Config) error {
+func setOutputs(appID string, presetCfg *PresetConfig, zcfg *zap.Config) error {
 	if len(presetCfg.Outputs) == 0 {
 		return nil
 	}
@@ -202,15 +207,15 @@ func parseOutputs(appID string, presetCfg *PresetConfig, zcfg *zap.Config) error
 	}
 
 	if fileEnabled {
-		if err := parseFileOutput(appID, presetCfg, zcfg); err != nil {
-			return err
+		if err := setFileOutput(appID, presetCfg, zcfg); err != nil {
+			return fmt.Errorf("set file output: %w", err)
 		}
 	}
 
 	return nil
 }
 
-func parseFileOutput(appID string, presetCfg *PresetConfig, zcfg *zap.Config) error {
+func setFileOutput(appID string, presetCfg *PresetConfig, zcfg *zap.Config) error {
 	var dir string
 
 	if filepath.IsLocal(presetCfg.OutputFile.Dir) {
@@ -236,7 +241,7 @@ func parseFileOutput(appID string, presetCfg *PresetConfig, zcfg *zap.Config) er
 	return nil
 }
 
-func parseKeys(presetCfg *PresetConfig, zcfg *zap.Config) {
+func setKeys(presetCfg *PresetConfig, zcfg *zap.Config) {
 	if presetCfg.Encoding == EncodingJSON {
 		zcfg.EncoderConfig.TimeKey = presetCfg.JSONTimeKey
 		zcfg.EncoderConfig.MessageKey = presetCfg.JSONMessageKey

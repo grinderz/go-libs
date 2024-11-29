@@ -4,6 +4,8 @@ package zerr
 
 import (
 	"errors"
+	"fmt"
+	"os"
 
 	"go.uber.org/zap"
 )
@@ -51,6 +53,40 @@ func (e *Error) WithField(f zap.Field, fields ...zap.Field) *Error {
 		err:      e,
 		fields:   append(fields, f),
 		hasStack: e.hasStack,
+	}
+}
+
+func (e *Error) LogError(logger *zap.Logger, message string) {
+	if e == nil {
+		return
+	}
+
+	if logger == nil {
+		fmt.Fprintf(os.Stderr, "[error] %s %+v %+v\n", message, e.Error(), e.Fields())
+		return
+	}
+
+	if message == "" {
+		logger.Error(e.Error(), e.Fields()...)
+	} else {
+		logger.Error(fmt.Sprintf("%s: %v", message, e.Error()), e.Fields()...)
+	}
+}
+
+func (e *Error) LogWarn(logger *zap.Logger, message string) {
+	if e == nil {
+		return
+	}
+
+	if logger == nil {
+		fmt.Fprintf(os.Stderr, "[warn] %s %+v %+v\n", message, e.Error(), e.Fields())
+		return
+	}
+
+	if message == "" {
+		logger.Warn(e.Error(), e.Fields()...)
+	} else {
+		logger.Warn(fmt.Sprintf("%s: %v", message, e.Error()), e.Fields()...)
 	}
 }
 

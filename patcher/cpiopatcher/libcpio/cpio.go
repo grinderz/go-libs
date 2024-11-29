@@ -78,7 +78,7 @@ func cut(dst io.Writer, src *os.File) error {
 
 	i, err := findTrailer(src)
 	if err != nil {
-		return err
+		return fmt.Errorf("find trailer: %w", err)
 	}
 
 	if _, err = io.CopyN(dst, src, i); err != nil {
@@ -102,17 +102,17 @@ func WriteHeader(dst io.Writer, reader io.Reader, footerSize int64) error {
 
 func CutHeader(inFile, cpioFile *os.File, bufferSize int) (HeaderTypeEnum, int64, error) {
 	if err := cut(cpioFile, inFile); err != nil {
-		return HeaderTypeUnknown, 0, err
+		return HeaderTypeUnknown, 0, fmt.Errorf("cut cpio: %w", err)
 	}
 
 	cpioZeroFooterSize, err := findZeroFooterSize(inFile, bufferSize)
 	if err != nil {
-		return HeaderTypeUnknown, 0, err
+		return HeaderTypeUnknown, 0, fmt.Errorf("find zero footer size: %w", err)
 	}
 
 	fileType, err := HeaderTypeFromReader(inFile)
 	if err != nil {
-		return HeaderTypeUnknown, 0, err
+		return HeaderTypeUnknown, 0, fmt.Errorf("recognize header type: %w", err)
 	}
 
 	return fileType, cpioZeroFooterSize, nil

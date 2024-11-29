@@ -3,9 +3,7 @@ package libzap
 import (
 	"strings"
 
-	"go.uber.org/zap"
-
-	"github.com/grinderz/go-libs/libzap/zerr"
+	"github.com/grinderz/go-libs/liberrors"
 )
 
 //go:generate go run golang.org/x/tools/cmd/stringer -type=EncodingEnum -linecomment -output encoding_enum_string.go
@@ -20,7 +18,7 @@ const (
 func (e *EncodingEnum) SetValue(value string) error {
 	encoding := EncodingFromString(value)
 	if encoding == EncodingUnknown {
-		return newEncodingValueError(value)
+		return liberrors.NewInvalidStringEntityError("encoding", value)
 	}
 
 	*e = encoding
@@ -30,7 +28,7 @@ func (e *EncodingEnum) SetValue(value string) error {
 
 func (e EncodingEnum) MarshalText() ([]byte, error) {
 	if e == EncodingUnknown {
-		return nil, newEncodingValueError(e.String())
+		return nil, liberrors.NewInvalidStringEntityError("encoding", e.String())
 	}
 
 	return []byte(e.String()), nil
@@ -49,18 +47,4 @@ func EncodingFromString(value string) EncodingEnum {
 	default:
 		return EncodingUnknown
 	}
-}
-
-type encodingValueError struct {
-	value string
-}
-
-func (e *encodingValueError) Error() string {
-	return "encoding invalid value: " + e.value
-}
-
-func newEncodingValueError(value string) error {
-	return zerr.Wrap(&encodingValueError{
-		value: value,
-	}, zap.String("encoding", value))
 }
