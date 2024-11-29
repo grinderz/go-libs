@@ -2,10 +2,11 @@ MAKEFLAGS += --warn-undefined-variables
 
 SHELL := /usr/bin/env bash -o errtrace -o pipefail -o noclobber -o errexit -o nounset
 
-DOCKER_GOLANGCI_LINT_VERSION := 1.61.0
+DOCKER_GOLANGCI_LINT_VERSION := 1.62.2
 DOCKER_GOLANGCI_LINT_TIMEOUT := 5m
 
 ARGS ?=
+GOTEST_ARGS :=
 
 ##@ General
 
@@ -51,3 +52,9 @@ lint.pre-commit: ## Run pre-commit
 
 .PHONY: lint
 lint: lint.golangci lint.pre-commit ## Run all linters
+
+##@ Test
+
+.PHONY: test.go
+test.go: ## Run go test
+	@go test $(GOTEST_ARGS) ./...
