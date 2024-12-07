@@ -53,7 +53,7 @@ func (p *Patcher) Patch(patterns []*patcher.Pattern, backup bool) {
 		if err := inFile.Close(); err != nil {
 			zerr.Wrap(err).WithField(
 				zap.String("path", p.path),
-			).LogWarn(libzap.Logger, "in file close failed")
+			).LogError(libzap.Logger, "in file close failed")
 		}
 	}()
 
@@ -94,7 +94,7 @@ func (p *Patcher) Patch(patterns []*patcher.Pattern, backup bool) {
 			if err := cpioFile.Close(); err != nil {
 				zerr.Wrap(err).WithField(
 					zap.String("cpio_path", cpioFilePath),
-				).LogWarn(libzap.Logger, "cpio file close failed")
+				).LogError(libzap.Logger, "cpio file close failed")
 			}
 		}()
 
@@ -129,7 +129,7 @@ func (p *Patcher) Patch(patterns []*patcher.Pattern, backup bool) {
 		if err := rawFile.Close(); err != nil {
 			zerr.Wrap(err).WithField(
 				zap.String("raw_path", rawFilePath),
-			).LogWarn(libzap.Logger, "raw file close failed")
+			).LogError(libzap.Logger, "raw file close failed")
 		}
 	}()
 

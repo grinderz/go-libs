@@ -218,6 +218,9 @@ linters-settings:
 
 issues:
   exclude-rules:
+    - path: config.go
+      linters:
+        - lll
     # Exclude `lll` issues for long lines with `go:generate`.
     - linters:
         - lll
