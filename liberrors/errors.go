@@ -4,14 +4,11 @@ import (
 	"errors"
 	"fmt"
 
-	"go.uber.org/zap"
-
 	"github.com/grinderz/go-libs/libzap/zerr"
+	"go.uber.org/zap"
 )
 
-var (
-	ErrNotImplemented = errors.New("not implemented")
-)
+var ErrNotImplemented = errors.New("not implemented")
 
 type castError struct {
 	name    string

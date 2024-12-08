@@ -3,9 +3,8 @@ package libzap
 import (
 	"context"
 
-	"go.uber.org/zap"
-
 	"github.com/grinderz/go-libs/libctx"
+	"go.uber.org/zap"
 )
 
 var (

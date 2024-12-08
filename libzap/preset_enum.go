@@ -6,8 +6,8 @@ import (
 	"github.com/grinderz/go-libs/liberrors"
 )
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=PresetEnum -linecomment -output preset_enum_string.go
-type PresetEnum int
+//go:generate go run golang.org/x/tools/cmd/stringer@latest -type=PresetEnum -linecomment -output preset_enum_string.go
+type PresetEnum int //nolint:recvcheck
 
 const (
 	PresetUnknown     PresetEnum = iota // unknown

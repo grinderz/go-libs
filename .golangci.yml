@@ -52,13 +52,8 @@ output:
 linters:
   disable:
     - godox
-    - gci
-    - exhaustruct
-    - gofumpt
     - nlreturn
-    - musttag
     - depguard
-    - recvcheck
   enable:
     - gochecknoinits
     - asasalint
@@ -68,7 +63,6 @@ linters:
     - containedctx
     - contextcheck
     - decorder
-    #    - depguard
     - dogsled
     - dupl
     - dupword

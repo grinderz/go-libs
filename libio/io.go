@@ -6,11 +6,10 @@ import (
 	"io"
 	"os"
 
-	"github.com/xi2/xz"
-	"go.uber.org/zap"
-
 	"github.com/grinderz/go-libs/libzap"
 	"github.com/grinderz/go-libs/libzap/zerr"
+	"github.com/xi2/xz"
+	"go.uber.org/zap"
 )
 
 type unpackMaxDecompressLimitReachedError struct {

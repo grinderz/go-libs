@@ -6,10 +6,9 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/grinderz/go-libs/libzap/zerr"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-
-	"github.com/grinderz/go-libs/libzap/zerr"
 )
 
 var Logger *zap.Logger //nolint:gochecknoglobals

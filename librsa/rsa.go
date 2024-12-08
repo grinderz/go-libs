@@ -29,7 +29,7 @@ func ParsePrivateKey(pubKey *rsa.PublicKey, ds []byte) *rsa.PrivateKey {
 	d := new(big.Int)
 	d.SetBytes(ds)
 
-	return &rsa.PrivateKey{PublicKey: *pubKey, D: d}
+	return &rsa.PrivateKey{PublicKey: *pubKey, D: d} //nolint:exhaustruct
 }
 
 func MarshalPrivateKey(privatekey *rsa.PrivateKey) []byte {

@@ -118,8 +118,9 @@ func wrapWithStack(lvl int, err error, fields ...zap.Field) *Error {
 
 func WrapNoStack(err error, fields ...zap.Field) *Error {
 	return &Error{
-		err:    err,
-		fields: fields,
+		err:      err,
+		fields:   fields,
+		hasStack: false,
 	}
 }
 

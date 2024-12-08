@@ -6,10 +6,9 @@ import (
 	"io"
 	"strings"
 
-	"go.uber.org/zap"
-
 	"github.com/grinderz/go-libs/liberrors"
 	"github.com/grinderz/go-libs/libzap/zerr"
+	"go.uber.org/zap"
 )
 
 const MaxMagicSize = 6
@@ -28,8 +27,8 @@ var (
 	}
 )
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=HeaderTypeEnum -linecomment -output header_type_enum_string.go
-type HeaderTypeEnum int
+//go:generate go run golang.org/x/tools/cmd/stringer@latest -type=HeaderTypeEnum -linecomment -output header_type_enum_string.go
+type HeaderTypeEnum int //nolint:recvcheck
 
 const (
 	HeaderTypeUnknown HeaderTypeEnum = iota // unknown

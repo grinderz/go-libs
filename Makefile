@@ -2,11 +2,10 @@ MAKEFLAGS += --warn-undefined-variables
 
 SHELL := /usr/bin/env bash -o errtrace -o pipefail -o noclobber -o errexit -o nounset
 
-DOCKER_GOLANGCI_LINT_VERSION := 1.62.2
-DOCKER_GOLANGCI_LINT_TIMEOUT := 5m
+GOLANGCI_LINT_VERSION := 1.62.2
+GOLANGCI_LINT_TIMEOUT := 5m
 
 ARGS ?=
-GOTEST_ARGS :=
 
 ##@ General
 
@@ -30,31 +29,39 @@ help: ## Display this help screen
 
 .PHONY: go.generate
 go.generate: ## Go generate recursive
-	@go generate ./...
+	go generate ./...
 
-.PHONY: go.fmt
-go.fmt: ## Go fmt
-	@gofmt -w -s .
+.PHONY: format
+format: ## Format the source code
+	# protogetter --fix ./...
+	go run github.com/segmentio/golines@latest --max-len=120 --no-reformat-tags --ignore-generated --write-output .
+	go run mvdan.cc/gofumpt@latest -l -w -modpath . .
+	go run golang.org/x/tools/cmd/goimports@latest -l -w .
+	go run github.com/daixiang0/gci@latest write --skip-generated -s standard -s default .
 
 ##@ Lint
 
 .PHONY: lint.docker.golangci
 lint.docker.golangci: ## Run golangci-lint in docker
-	@docker run -t --rm -v $$(pwd):/app -v ~/.cache/golangci-lint/v$(DOCKER_GOLANGCI_LINT_VERSION):/root/.cache -w /app golangci/golangci-lint:v$(DOCKER_GOLANGCI_LINT_VERSION) golangci-lint run --timeout=$(DOCKER_GOLANGCI_LINT_TIMEOUT)
+	docker run -t --rm -v $$(pwd):/app -v ~/.cache/golangci-lint/v$(GOLANGCI_LINT_VERSION):/root/.cache -w /app golangci/golangci-lint:v$(GOLANGCI_LINT_VERSION) golangci-lint run --timeout=$(GOLANGCI_LINT_TIMEOUT)
 
 .PHONY: lint.golangci
 lint.golangci: ## Run golangci-lint
-	@golangci-lint run --timeout=$(DOCKER_GOLANGCI_LINT_TIMEOUT) $(ARGS)
+	go run github.com/golangci/golangci-lint/cmd/golangci-lint@v${GOLANGCI_LINT_VERSION} run --timeout=$(GOLANGCI_LINT_TIMEOUT) $(ARGS)
 
 .PHONY: lint.pre-commit
 lint.pre-commit: ## Run pre-commit
-	@pre-commit run --all-files
+	pre-commit run --all-files
 
 .PHONY: lint
 lint: lint.golangci lint.pre-commit ## Run all linters
 
 ##@ Test
 
-.PHONY: test.go
-test.go: ## Run go test
-	@go test $(GOTEST_ARGS) ./...
+.PHONY: test
+test: ## Run go test
+	go test -v -covermode=count -coverprofile=coverage.out -tags coverage ./...
+
+.PHONY: cover
+cover: test
+	go tool cover -func=coverage.out

@@ -4,14 +4,11 @@ import (
 	"errors"
 	"fmt"
 
-	"go.uber.org/zap"
-
 	"github.com/grinderz/go-libs/libzap/zerr"
+	"go.uber.org/zap"
 )
 
-var (
-	ErrNilCtx = errors.New("nil context")
-)
+var ErrNilCtx = errors.New("nil context")
 
 type keyNotFoundInCtxError struct {
 	key Key

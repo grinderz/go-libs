@@ -5,19 +5,18 @@ import (
 	"os"
 	"path/filepath"
 
-	"go.uber.org/zap"
-
 	"github.com/grinderz/go-libs/liberrors"
 	"github.com/grinderz/go-libs/libio"
 	"github.com/grinderz/go-libs/libzap"
 	"github.com/grinderz/go-libs/libzap/zerr"
 	"github.com/grinderz/go-libs/patcher"
 	"github.com/grinderz/go-libs/patcher/cpiopatcher/libcpio"
+	"go.uber.org/zap"
 )
 
 const (
 	bufferSize         = 8192
-	filePerm           = 0644
+	filePerm           = 0o644
 	maxDecompressBytes = 524_288_000
 )
 
@@ -32,11 +31,12 @@ type Patcher struct {
 
 func New(temp, path string, result chan<- patcher.Result, logger *zap.Logger) *Patcher {
 	return &Patcher{
-		tempDir:  temp,
-		path:     path,
-		fileName: filepath.Base(path),
-		result:   result,
-		logger:   logger,
+		tempDir:            temp,
+		path:               path,
+		fileName:           filepath.Base(path),
+		cpioZeroFooterSize: 0,
+		result:             result,
+		logger:             logger,
 	}
 }
 
