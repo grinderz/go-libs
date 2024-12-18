@@ -52,9 +52,14 @@ output:
 linters:
   disable:
     - godox
+    - exhaustruct
     - nlreturn
     - depguard
   enable:
+    - recvcheck
+    - gci
+    - gofumpt
+    - musttag
     - gochecknoinits
     - asasalint
     - asciicheck

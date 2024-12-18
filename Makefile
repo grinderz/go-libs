@@ -56,12 +56,12 @@ lint.pre-commit: ## Run pre-commit
 .PHONY: lint
 lint: lint.golangci lint.pre-commit ## Run all linters
 
-##@ Test
+##@ Tests
 
 .PHONY: test
 test: ## Run go test
 	go test -v -covermode=count -coverprofile=coverage.out -tags coverage ./...
 
 .PHONY: cover
-cover: test
+cover: test ## Run coverage report
 	go tool cover -func=coverage.out
