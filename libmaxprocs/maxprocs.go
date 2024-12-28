@@ -40,7 +40,7 @@ func setAuto(cfg *AutoConfig, logger *zap.Logger) int {
 		}
 
 		maxProcs := value - cfg.RuntimeOverhead
-		if value > 1 && maxProcs > 1 {
+		if maxProcs > 0 {
 			logger.Info(fmt.Sprintf("maxprocs: Runtime overhead value applied GOMAXPROCS=%d", maxProcs))
 			return maxProcs
 		}
