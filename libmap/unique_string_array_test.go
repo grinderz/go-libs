@@ -14,7 +14,7 @@ func TestUniqueStringArray(t *testing.T) {
 	arr := make(libmap.UniqueStringArray)
 
 	for _, k := range keys {
-		for i := 0; i <= 1; i++ {
+		for range 2 {
 			if err := arr.Set(k); err != nil {
 				t.Fatal(err)
 			}

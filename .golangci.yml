@@ -2,7 +2,6 @@
 run:
   go: "1.23"
   issues-exit-code: 1
-  skip-dirs-use-default: true
   allow-parallel-runners: false
 
 output:
@@ -216,6 +215,7 @@ linters-settings:
       - env-required
 
 issues:
+  exclude-dirs-use-default: true
   exclude-rules:
     - path: config.go
       linters:
