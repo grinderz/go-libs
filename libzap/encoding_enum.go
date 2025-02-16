@@ -6,7 +6,7 @@ import (
 	"github.com/grinderz/go-libs/liberrors"
 )
 
-//go:generate go run golang.org/x/tools/cmd/stringer@latest -type=EncodingEnum -linecomment -output encoding_enum_string.go
+//go:generate go run golang.org/x/tools/cmd/stringer -type=EncodingEnum -linecomment -output encoding_enum_string.go
 type EncodingEnum int //nolint:recvcheck
 
 const (

@@ -86,7 +86,7 @@ func Setup(appID string, cfg *Config) {
 }
 
 func setLevel(presetCfg *PresetConfig, zcfg *zap.Config) error {
-	if len(presetCfg.Level) == 0 {
+	if presetCfg.Level == "" {
 		return nil
 	}
 
@@ -104,7 +104,7 @@ func setLevel(presetCfg *PresetConfig, zcfg *zap.Config) error {
 }
 
 func setLevelEncoder(presetCfg *PresetConfig, zcfg *zap.Config) error {
-	if len(presetCfg.LevelEncoder) == 0 {
+	if presetCfg.LevelEncoder == "" {
 		return nil
 	}
 
@@ -142,7 +142,7 @@ func setTimeEncoder(presetCfg *PresetConfig, zcfg *zap.Config) error {
 }
 
 func setDurationEncoder(presetCfg *PresetConfig, zcfg *zap.Config) error {
-	if len(presetCfg.DurationEncoder) == 0 {
+	if presetCfg.DurationEncoder == "" {
 		return nil
 	}
 
@@ -161,7 +161,7 @@ func setDurationEncoder(presetCfg *PresetConfig, zcfg *zap.Config) error {
 }
 
 func setCallerEncoder(presetCfg *PresetConfig, zcfg *zap.Config) error {
-	if len(presetCfg.CallerEncoder) == 0 {
+	if presetCfg.CallerEncoder == "" {
 		return nil
 	}
 

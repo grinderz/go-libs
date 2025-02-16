@@ -15,7 +15,6 @@ type PresetConfig struct {
 	DurationEncoder   string              `yaml:"durationEncoder"   env:"DURATION_ENCODER"    env-default:"string"     env-description:"Set the duration encoder."`
 	CallerEncoder     string              `yaml:"callerEncoder"     env:"CALLER_ENCODER"      env-default:""           env-description:"Override the caller encoder."`
 	Outputs           map[OutputEnum]bool `yaml:"outputs"           env:"OUTPUTS"             env-default:""           env-description:"The outputs override (stdout, stderr, file)."`
-	OutputFile        OutputFileConfig    `yaml:"outputFile"        env-prefix:"OUTPUT_FILE_"`
 	JSONTimeKey       string              `yaml:"jsonTimeKey"       env:"JSON_TIME_KEY"       env-default:"ts"         env-description:"Set the key used for time log entry. If key is empty, the entry is omitted."`
 	JSONLevelKey      string              `yaml:"jsonLevelKey"      env:"JSON_LEVEL_KEY"      env-default:"level"      env-description:"Set the key used for level log entry. If key is empty, the entry is omitted."`
 	JSONNameKey       string              `yaml:"jsonNameKey"       env:"JSON_NAME_KEY"       env-default:"logger"     env-description:"Set the key used for name log entry. If key is empty, the entry is omitted."`
@@ -25,9 +24,11 @@ type PresetConfig struct {
 	JSONStacktraceKey string              `yaml:"jsonStacktraceKey" env:"JSON_STACKTRACE_KEY" env-default:"stacktrace" env-description:"Set the key used for stack trace log entry. If key is empty, the entry is omitted."`
 	SkipLineEnding    bool                `yaml:"skipLineEnding"    env:"SKIP_LINE_ENDING"    env-default:"false"      env-description:"Disable adding newline characters between the log statements."`
 	LineEnding        string              `yaml:"lineEnding"        env:"LINE_ENDING"         env-default:""           env-description:"Override the Unix-style default"`
-	Encoding          EncodingEnum        `yaml:"encoding"          env:"ENCODING"            env-default:""           env-required:"true"                                                                                                            env-description:"Set the logger encoder (console, json)."`
+	Encoding          EncodingEnum        `yaml:"encoding"          env:"ENCODING"            env-required:"true"      env-description:"Set the logger encoder (console, json)."`
 	Development       bool                `yaml:"development"       env:"DEVELOPMENT"         env-default:"false"      env-description:"Puts the logger in development mode, which makes DPanic-level logs panic instead of simply logging an error."`
 	ConsoleSeparator  string              `yaml:"consoleSeparator"  env:"CONSOLE_SEPARATOR"   env-default:""           env-description:"Override the separator used for console encoding."`
+
+	OutputFile OutputFileConfig `yaml:"outputFile" env-prefix:"OUTPUT_FILE_"`
 }
 
 type Config struct {

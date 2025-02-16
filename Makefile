@@ -27,8 +27,8 @@ help: ## Display this help screen
 
 ##@ Development
 
-.PHONY: go.generate
-go.generate: ## Go generate recursive
+.PHONY: generate
+generate: ## Go generate recursive
 	go generate ./...
 
 .PHONY: format
