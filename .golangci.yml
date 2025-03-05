@@ -111,7 +111,7 @@ linters:
     - rowserrcheck
     - stylecheck
     - tagliatelle
-    - tenv
+    - usetesting
     - testableexamples
     - testpackage
     - thelper

@@ -8,7 +8,7 @@ import (
 
 var badgerCallerSkip = 2 //nolint:gochecknoglobals
 
-type badger interface {
+type IBadgerLogger interface {
 	Errorf(s string, i ...interface{})
 	Warningf(s string, i ...interface{})
 	Infof(s string, i ...interface{})
@@ -41,4 +41,4 @@ func (l *BadgerLogger) Debugf(s string, i ...interface{}) {
 	l.log.Debug(fmt.Sprintf(s, i...))
 }
 
-var _ badger = &BadgerLogger{nil}
+var _ IBadgerLogger = &BadgerLogger{nil}
