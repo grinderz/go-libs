@@ -11,7 +11,11 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var Logger *zap.Logger //nolint:gochecknoglobals
+var _logger *zap.Logger //nolint:gochecknoglobals
+
+func Logger() *zap.Logger {
+	return _logger
+}
 
 func New(appID string, cfg *Config) (*zap.Logger, error) {
 	var (
@@ -72,17 +76,33 @@ func New(appID string, cfg *Config) (*zap.Logger, error) {
 	return logger, nil
 }
 
-func Setup(appID string, cfg *Config) {
+func Setup(appID string, cfg *Config) error {
+	if _logger != nil {
+		return ErrLoggerAlreadyDefined
+	}
+
 	if cfg == nil {
-		panic("empty zap config")
+		return ErrEmptyConfig
 	}
 
 	zp, err := New(appID, cfg)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	Logger = zp
+	_logger = zp
+
+	return nil
+}
+
+func SetupFromLogger(logger *zap.Logger) error {
+	if _logger != nil {
+		return ErrLoggerAlreadyDefined
+	}
+
+	_logger = logger
+
+	return nil
 }
 
 func setLevel(presetCfg *PresetConfig, zcfg *zap.Config) error {

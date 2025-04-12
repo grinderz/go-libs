@@ -46,7 +46,7 @@ func CloneReader(reader io.Reader, dst string) error {
 		if err := dstFile.Close(); err != nil {
 			zerr.Wrap(err).WithField(
 				zap.String("dst", dst),
-			).LogError(libzap.Logger, "dst file close failed")
+			).LogError(libzap.Logger(), "dst file close failed")
 		}
 	}()
 
@@ -84,7 +84,7 @@ func UnpackGZ(dst io.Writer, reader io.Reader, maxDecompressBytes int64) error {
 		if err := gzReader.Close(); err != nil {
 			zerr.Wrap(err).WithField(
 				zap.String("gz_reader", gzReader.Name),
-			).LogError(libzap.Logger, "gz reader close failed")
+			).LogError(libzap.Logger(), "gz reader close failed")
 		}
 	}()
 
@@ -106,7 +106,7 @@ func PackGZ(dst io.Writer, reader io.Reader) error {
 		if err := gzWriter.Close(); err != nil {
 			zerr.Wrap(err).WithField(
 				zap.String("gz_writer", gzWriter.Name),
-			).LogError(libzap.Logger, "gz writer close failed")
+			).LogError(libzap.Logger(), "gz writer close failed")
 		}
 	}()
 

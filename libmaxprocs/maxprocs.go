@@ -17,8 +17,8 @@ const (
 	maxProcsKey = "GOMAXPROCS"
 )
 
-func Set(cfg *Config) {
-	sublogger := libzap.Logger.With(libzap.FieldPkg(namespace))
+func Set(cfg *Config, logger *zap.Logger) {
+	sublogger := logger.With(libzap.FieldPkg(namespace))
 
 	switch cfg.Engine {
 	case EngineAuto:

@@ -7,7 +7,6 @@ import (
 
 	"github.com/grinderz/go-libs/liberrors"
 	"github.com/grinderz/go-libs/libio"
-	"github.com/grinderz/go-libs/libzap"
 	"github.com/grinderz/go-libs/libzap/zerr"
 	"github.com/grinderz/go-libs/patcher"
 	"github.com/grinderz/go-libs/patcher/cpiopatcher/libcpio"
@@ -53,7 +52,7 @@ func (p *Patcher) Patch(patterns []*patcher.Pattern, backup bool) {
 		if err := inFile.Close(); err != nil {
 			zerr.Wrap(err).WithField(
 				zap.String("path", p.path),
-			).LogError(libzap.Logger, "in file close failed")
+			).LogError(p.logger, "in file close failed")
 		}
 	}()
 
@@ -94,7 +93,7 @@ func (p *Patcher) Patch(patterns []*patcher.Pattern, backup bool) {
 			if err := cpioFile.Close(); err != nil {
 				zerr.Wrap(err).WithField(
 					zap.String("cpio_path", cpioFilePath),
-				).LogError(libzap.Logger, "cpio file close failed")
+				).LogError(p.logger, "cpio file close failed")
 			}
 		}()
 
@@ -129,7 +128,7 @@ func (p *Patcher) Patch(patterns []*patcher.Pattern, backup bool) {
 		if err := rawFile.Close(); err != nil {
 			zerr.Wrap(err).WithField(
 				zap.String("raw_path", rawFilePath),
-			).LogError(libzap.Logger, "raw file close failed")
+			).LogError(p.logger, "raw file close failed")
 		}
 	}()
 
