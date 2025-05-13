@@ -47,7 +47,7 @@ lint.docker.golangci: ## Run golangci-lint in docker
 
 .PHONY: lint.golangci
 lint.golangci: ## Run golangci-lint
-	go run github.com/golangci/golangci-lint/cmd/golangci-lint@v${GOLANGCI_LINT_VERSION} run --timeout=$(GOLANGCI_LINT_TIMEOUT) $(ARGS)
+	go run github.com/golangci/golangci-lint/cmd/golangci-lint@v$(GOLANGCI_LINT_VERSION) run --timeout=$(GOLANGCI_LINT_TIMEOUT) $(ARGS)
 
 .PHONY: lint.pre-commit
 lint.pre-commit: ## Run pre-commit
