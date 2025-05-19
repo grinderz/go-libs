@@ -17,7 +17,7 @@ func Logger() *zap.Logger {
 	return _logger
 }
 
-func New(appID string, cfg *Config) (*zap.Logger, error) {
+func New(appID string, cfg *Config, runtimeCfg *RuntimeConfig) (*zap.Logger, error) {
 	var (
 		zcfg      zap.Config
 		presetCfg *PresetConfig
@@ -44,10 +44,6 @@ func New(appID string, cfg *Config) (*zap.Logger, error) {
 
 	setKeys(presetCfg, &zcfg)
 
-	if err := setLevel(presetCfg, &zcfg); err != nil {
-		return nil, fmt.Errorf("set level: %w", err)
-	}
-
 	if err := setLevelEncoder(presetCfg, &zcfg); err != nil {
 		return nil, fmt.Errorf("set level encoder: %w", err)
 	}
@@ -64,8 +60,16 @@ func New(appID string, cfg *Config) (*zap.Logger, error) {
 		return nil, fmt.Errorf("set caller encoder: %w", err)
 	}
 
-	if err := setOutputs(appID, presetCfg, &zcfg); err != nil {
+	if err := setOutputs(appID, presetCfg, &zcfg, runtimeCfg); err != nil {
 		return nil, fmt.Errorf("set outputs encoder: %w", err)
+	}
+
+	if runtimeCfg != nil {
+		zcfg.Level = zap.NewAtomicLevelAt(runtimeCfg.Level)
+	} else {
+		if err := setLevel(presetCfg, &zcfg); err != nil {
+			return nil, fmt.Errorf("set level: %w", err)
+		}
 	}
 
 	logger, err := zcfg.Build()
@@ -85,7 +89,7 @@ func Setup(appID string, cfg *Config) error {
 		return ErrEmptyConfig
 	}
 
-	zp, err := New(appID, cfg)
+	zp, err := New(appID, cfg, nil)
 	if err != nil {
 		return err
 	}
@@ -199,7 +203,7 @@ func setCallerEncoder(presetCfg *PresetConfig, zcfg *zap.Config) error {
 	return nil
 }
 
-func setOutputs(appID string, presetCfg *PresetConfig, zcfg *zap.Config) error {
+func setOutputs(appID string, presetCfg *PresetConfig, zcfg *zap.Config, rcfg *RuntimeConfig) error {
 	if len(presetCfg.Outputs) == 0 {
 		return nil
 	}
@@ -212,9 +216,15 @@ func setOutputs(appID string, presetCfg *PresetConfig, zcfg *zap.Config) error {
 			continue
 		}
 
-		if output == OutputFile && len(appID) > 0 {
-			fileEnabled = true
-			continue
+		if output == OutputFile {
+			if rcfg != nil && !rcfg.OutputFileEnabled {
+				continue
+			}
+
+			if len(appID) > 0 {
+				fileEnabled = true
+				continue
+			}
 		}
 
 		outputs = append(outputs, output.String())

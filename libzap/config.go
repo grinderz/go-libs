@@ -1,5 +1,7 @@
 package libzap
 
+import "go.uber.org/zap/zapcore"
+
 type OutputFileConfig struct {
 	Dir        string `yaml:"dir"        env:"DIR"         env-default:"logs"       env-description:"Set the output dir for logs."`
 	TimeLayout string `yaml:"timeLayout" env:"TIME_LAYOUT" env-default:"2006-01-02" env-description:"Set the time layout for file name (appID-time.log)."`
@@ -36,4 +38,9 @@ type Config struct {
 
 	Development PresetConfig `yaml:"development" env-prefix:"DEVELOPMENT_"`
 	Production  PresetConfig `yaml:"production"  env-prefix:"PRODUCTION_"`
+}
+
+type RuntimeConfig struct {
+	Level             zapcore.Level
+	OutputFileEnabled bool
 }
