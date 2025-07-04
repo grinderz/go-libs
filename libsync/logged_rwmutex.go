@@ -31,10 +31,10 @@ type LoggedRWMutex struct {
 	rUnlockers    chan holder
 }
 
-func NewLoggedRWMutex(cfg *Config, logger *zap.Logger) *LoggedRWMutex {
+func NewLoggedRWMutex(cfg *Config) *LoggedRWMutex {
 	mutex := &LoggedRWMutex{
 		cfg:         cfg,
-		logger:      logger.With(libzap.FieldPkg("sync_rwmutex")),
+		logger:      libzap.Logger().With(libzap.FieldPkg("sync_rwmutex")),
 		readHolders: make(map[int][]holder),
 		rUnlockers:  make(chan holder, unlockersChanSize),
 	}

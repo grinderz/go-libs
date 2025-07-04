@@ -18,10 +18,10 @@ type LoggedWaitGroup struct {
 	logger *zap.Logger
 }
 
-func NewLoggedWaitGroup(cfg *Config, logger *zap.Logger) *LoggedWaitGroup {
+func NewLoggedWaitGroup(cfg *Config) *LoggedWaitGroup {
 	return &LoggedWaitGroup{
 		cfg:    cfg,
-		logger: logger.With(libzap.FieldPkg("sync_waitgroup")),
+		logger: libzap.Logger().With(libzap.FieldPkg("sync_waitgroup")),
 	}
 }
 

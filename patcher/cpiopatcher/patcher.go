@@ -7,6 +7,7 @@ import (
 
 	"github.com/grinderz/go-libs/liberrors"
 	"github.com/grinderz/go-libs/libio"
+	"github.com/grinderz/go-libs/libzap"
 	"github.com/grinderz/go-libs/libzap/zerr"
 	"github.com/grinderz/go-libs/patcher"
 	"github.com/grinderz/go-libs/patcher/cpiopatcher/libcpio"
@@ -28,14 +29,14 @@ type Patcher struct {
 	logger             *zap.Logger
 }
 
-func New(temp, path string, result chan<- patcher.Result, logger *zap.Logger) *Patcher {
+func New(temp, path string, result chan<- patcher.Result) *Patcher {
 	return &Patcher{
 		tempDir:            temp,
 		path:               path,
 		fileName:           filepath.Base(path),
 		cpioZeroFooterSize: 0,
 		result:             result,
-		logger:             logger,
+		logger:             libzap.Logger().With(libzap.FieldPkg("cpio_patcher")),
 	}
 }
 

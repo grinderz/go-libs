@@ -1,6 +1,7 @@
 package libmaxprocs
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"os"
@@ -9,7 +10,6 @@ import (
 	"github.com/grinderz/go-libs/libzap"
 	"github.com/grinderz/go-libs/libzap/zerr"
 	"go.uber.org/automaxprocs/maxprocs"
-	"go.uber.org/zap"
 )
 
 const (
@@ -17,21 +17,23 @@ const (
 	maxProcsKey = "GOMAXPROCS"
 )
 
-func Set(cfg *Config, logger *zap.Logger) {
-	sublogger := logger.With(libzap.FieldPkg(namespace))
+func Set(ctx context.Context, cfg *Config) {
+	ctx = libzap.ToContext(ctx, libzap.Logger().With(libzap.FieldPkg(namespace)))
 
 	switch cfg.Engine {
 	case EngineAuto:
-		setAuto(&cfg.Auto, sublogger)
+		setAuto(ctx, &cfg.Auto)
 	case EngineDirect:
-		setDirect(&cfg.Direct, sublogger)
+		setDirect(ctx, &cfg.Direct)
 	case EngineDisabled, EngineUnknown:
 		fallthrough
 	default:
 	}
 }
 
-func setAuto(cfg *AutoConfig, logger *zap.Logger) int {
+func setAuto(ctx context.Context, cfg *AutoConfig) int {
+	logger := libzap.FromContext(ctx)
+
 	roundQuotaFn := func(v float64) int {
 		value := int(math.Floor(v))
 
@@ -60,7 +62,9 @@ func setAuto(cfg *AutoConfig, logger *zap.Logger) int {
 	return 0
 }
 
-func setDirect(cfg *DirectConfig, logger *zap.Logger) {
+func setDirect(ctx context.Context, cfg *DirectConfig) {
+	logger := libzap.FromContext(ctx)
+
 	if maxProcs, exists := os.LookupEnv(maxProcsKey); exists {
 		logger.Info(fmt.Sprintf("maxprocs: Honoring GOMAXPROCS=%q as set in environment", maxProcs))
 		return

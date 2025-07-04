@@ -22,10 +22,10 @@ type LoggedMutex struct {
 	logger *zap.Logger
 }
 
-func NewLoggedMutex(cfg *Config, logger *zap.Logger) *LoggedMutex {
+func NewLoggedMutex(cfg *Config) *LoggedMutex {
 	mutex := &LoggedMutex{
 		cfg:    cfg,
-		logger: logger.With(libzap.FieldPkg("sync_mutex")),
+		logger: libzap.Logger().With(libzap.FieldPkg("sync_mutex")),
 	}
 	mutex.holder.Store(holder{})
 
