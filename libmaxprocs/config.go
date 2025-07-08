@@ -3,8 +3,8 @@ package libmaxprocs
 type Config struct {
 	Engine EngineEnum `yaml:"engine" env:"ENGINE" env-default:"disabled" env-description:"Engine to use (disabled, auto, direct)."`
 
-	Auto   AutoConfig   `yaml:"auto"   env-prefix:"AUTO_"`
-	Direct DirectConfig `yaml:"direct" env-prefix:"DIRECT_"`
+	Auto   AutoConfig   `yaml:"auto"   env-prefix:"AUTO__"`
+	Direct DirectConfig `yaml:"direct" env-prefix:"DIRECT__"`
 }
 
 type AutoConfig struct {

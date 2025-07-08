@@ -10,5 +10,5 @@ type LogConfig struct {
 }
 
 type Config struct {
-	Log LogConfig `yaml:"log" env-prefix:"LOG_"`
+	Log LogConfig `yaml:"log" env-prefix:"LOG__"`
 }

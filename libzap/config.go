@@ -30,14 +30,14 @@ type PresetConfig struct {
 	Development       bool                `yaml:"development"       env:"DEVELOPMENT"         env-default:"false"      env-description:"Puts the logger in development mode, which makes DPanic-level logs panic instead of simply logging an error."`
 	ConsoleSeparator  string              `yaml:"consoleSeparator"  env:"CONSOLE_SEPARATOR"   env-default:""           env-description:"Override the separator used for console encoding."`
 
-	OutputFile OutputFileConfig `yaml:"outputFile" env-prefix:"OUTPUT_FILE_"`
+	OutputFile OutputFileConfig `yaml:"outputFile" env-prefix:"OUTPUT_FILE__"`
 }
 
 type Config struct {
 	Preset PresetEnum `yaml:"preset" env:"PRESET" env-default:"production" env-description:"Override the preset (development, production)."`
 
-	Development PresetConfig `yaml:"development" env-prefix:"DEVELOPMENT_"`
-	Production  PresetConfig `yaml:"production"  env-prefix:"PRODUCTION_"`
+	Development PresetConfig `yaml:"development" env-prefix:"DEVELOPMENT__"`
+	Production  PresetConfig `yaml:"production"  env-prefix:"PRODUCTION__"`
 }
 
 type RuntimeConfig struct {
