@@ -102,6 +102,7 @@ func UnpackGZ(dst io.Writer, reader io.Reader, maxDecompressBytes int64) error {
 
 func PackGZ(dst io.Writer, reader io.Reader) error {
 	gzWriter := gzip.NewWriter(dst)
+
 	defer func() {
 		if err := gzWriter.Close(); err != nil {
 			zerr.Wrap(err).WithField(

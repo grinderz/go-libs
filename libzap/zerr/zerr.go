@@ -37,11 +37,7 @@ func (e *Error) Fields() []zap.Field {
 	fields := e.fields
 	err := e
 
-	for {
-		if !errors.As(err.err, &err) {
-			break
-		}
-
+	for errors.As(err.err, &err) {
 		fields = append(fields, err.fields...)
 	}
 

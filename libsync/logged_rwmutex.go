@@ -57,7 +57,9 @@ func (m *LoggedRWMutex) Lock() {
 
 	if duration >= m.cfg.Log.Threshold {
 		var unlockerStrings []string
+
 	loop:
+
 		for {
 			select {
 			case holder := <-m.rUnlockers:
@@ -66,6 +68,7 @@ func (m *LoggedRWMutex) Lock() {
 				break loop
 			}
 		}
+
 		m.logger.Debug(
 			fmt.Sprintf("rwmutex took %v to lock, locked at %s, runlockers while locking: [%s]",
 				duration,
@@ -110,6 +113,7 @@ func (m *LoggedRWMutex) Unlock() {
 
 func (m *LoggedRWMutex) RLock() {
 	m.RWMutex.RLock()
+
 	holder := getHolder()
 
 	m.readHoldersMut.Lock()
@@ -140,6 +144,7 @@ func (m *LoggedRWMutex) RUnlock() {
 			)
 		}
 	}
+
 	m.RWMutex.RUnlock()
 }
 
@@ -158,6 +163,7 @@ func (m *LoggedRWMutex) Holders() string {
 	output := holder.String() + " (writer)"
 
 	m.readHoldersMut.Lock()
+
 	for _, holders := range m.readHolders {
 		for _, holder := range holders {
 			output += " | " + holder.String() + " (reader)"

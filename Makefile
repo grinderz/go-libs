@@ -2,7 +2,7 @@ MAKEFLAGS += --warn-undefined-variables
 
 SHELL := /usr/bin/env bash -o errtrace -o pipefail -o noclobber -o errexit -o nounset
 
-GOLANGCI_LINT_VERSION := 1.64.8
+GOLANGCI_LINT_VERSION := 2.2.1
 GOLANGCI_LINT_TIMEOUT := 5m
 
 ARGS ?=
@@ -47,7 +47,7 @@ lint.docker.golangci: ## Run golangci-lint in docker
 
 .PHONY: lint.golangci
 lint.golangci: ## Run golangci-lint
-	go run github.com/golangci/golangci-lint/cmd/golangci-lint@v$(GOLANGCI_LINT_VERSION) run --timeout=$(GOLANGCI_LINT_TIMEOUT) $(ARGS)
+	go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v$(GOLANGCI_LINT_VERSION) run --timeout=$(GOLANGCI_LINT_TIMEOUT) $(ARGS)
 
 .PHONY: lint.pre-commit
 lint.pre-commit: ## Run pre-commit
