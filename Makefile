@@ -2,7 +2,7 @@ MAKEFLAGS += --warn-undefined-variables
 
 SHELL := /usr/bin/env bash -o errtrace -o pipefail -o noclobber -o errexit -o nounset
 
-GOLANGCI_LINT_VERSION := 2.2.1
+GOLANGCI_LINT_VERSION := 2.3.0
 GOLANGCI_LINT_TIMEOUT := 5m
 
 ARGS ?=
