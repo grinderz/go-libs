@@ -9,10 +9,10 @@ import (
 var badgerCallerSkip = 2 //nolint:gochecknoglobals
 
 type IBadgerLogger interface {
-	Errorf(s string, i ...interface{})
-	Warningf(s string, i ...interface{})
-	Infof(s string, i ...interface{})
-	Debugf(s string, i ...interface{})
+	Errorf(s string, i ...any)
+	Warningf(s string, i ...any)
+	Infof(s string, i ...any)
+	Debugf(s string, i ...any)
 }
 
 type BadgerLogger struct {
@@ -25,19 +25,19 @@ func NewBadgerLogger(log *zap.Logger) *BadgerLogger {
 	}
 }
 
-func (l *BadgerLogger) Errorf(s string, i ...interface{}) {
+func (l *BadgerLogger) Errorf(s string, i ...any) {
 	l.log.Error(fmt.Sprintf(s, i...))
 }
 
-func (l *BadgerLogger) Warningf(s string, i ...interface{}) {
+func (l *BadgerLogger) Warningf(s string, i ...any) {
 	l.log.Warn(fmt.Sprintf(s, i...))
 }
 
-func (l *BadgerLogger) Infof(s string, i ...interface{}) {
+func (l *BadgerLogger) Infof(s string, i ...any) {
 	l.log.Info(fmt.Sprintf(s, i...))
 }
 
-func (l *BadgerLogger) Debugf(s string, i ...interface{}) {
+func (l *BadgerLogger) Debugf(s string, i ...any) {
 	l.log.Debug(fmt.Sprintf(s, i...))
 }
 

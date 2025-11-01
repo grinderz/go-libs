@@ -1,6 +1,6 @@
 package libmap
 
-func MapKeysAsStrings(m map[string]interface{}) []string {
+func MapKeysAsStrings(m map[string]any) []string {
 	keys := make([]string, len(m))
 
 	var i uint

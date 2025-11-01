@@ -160,17 +160,18 @@ func (m *LoggedRWMutex) Holders() string {
 		return ""
 	}
 
-	output := holder.String() + " (writer)"
+	var output strings.Builder
+	output.WriteString(holder.String() + " (writer)")
 
 	m.readHoldersMut.Lock()
 
 	for _, holders := range m.readHolders {
 		for _, holder := range holders {
-			output += " | " + holder.String() + " (reader)"
+			output.WriteString(" | " + holder.String() + " (reader)")
 		}
 	}
 
 	m.readHoldersMut.Unlock()
 
-	return output
+	return output.String()
 }

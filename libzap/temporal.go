@@ -9,10 +9,10 @@ import (
 var temporalCallerSkip = 1 //nolint:gochecknoglobals
 
 type ITemporalLogger interface {
-	Debug(s string, i ...interface{})
-	Info(s string, i ...interface{})
-	Warn(s string, i ...interface{})
-	Error(s string, i ...interface{})
+	Debug(s string, i ...any)
+	Info(s string, i ...any)
+	Warn(s string, i ...any)
+	Error(s string, i ...any)
 }
 
 type ITemporalLoggerWithSkipCallers interface {
@@ -20,7 +20,7 @@ type ITemporalLoggerWithSkipCallers interface {
 }
 
 type ITemporalLoggerWithLogger interface {
-	With(i ...interface{}) ITemporalLogger
+	With(i ...any) ITemporalLogger
 }
 
 type TemporalLogger struct {
@@ -39,25 +39,25 @@ func NewTemporalLoggerWithCallerSkip(log *zap.Logger, i int) *TemporalLogger {
 	}
 }
 
-func NewTemporalLoggerWith(log *zap.Logger, i ...interface{}) *TemporalLogger {
+func NewTemporalLoggerWith(log *zap.Logger, i ...any) *TemporalLogger {
 	return &TemporalLogger{
 		log: log.Sugar().With(i...).Desugar(),
 	}
 }
 
-func (l *TemporalLogger) Error(s string, i ...interface{}) {
+func (l *TemporalLogger) Error(s string, i ...any) {
 	l.log.Error(fmt.Sprintf(s, i...))
 }
 
-func (l *TemporalLogger) Warn(s string, i ...interface{}) {
+func (l *TemporalLogger) Warn(s string, i ...any) {
 	l.log.Warn(fmt.Sprintf(s, i...))
 }
 
-func (l *TemporalLogger) Info(s string, i ...interface{}) {
+func (l *TemporalLogger) Info(s string, i ...any) {
 	l.log.Info(fmt.Sprintf(s, i...))
 }
 
-func (l *TemporalLogger) Debug(s string, i ...interface{}) {
+func (l *TemporalLogger) Debug(s string, i ...any) {
 	l.log.Debug(fmt.Sprintf(s, i...))
 }
 
@@ -65,7 +65,7 @@ func (l *TemporalLogger) WithCallerSkip(i int) ITemporalLogger { //nolint:iretur
 	return NewTemporalLoggerWithCallerSkip(l.log, i)
 }
 
-func (l *TemporalLogger) With(i ...interface{}) ITemporalLogger { //nolint:ireturn
+func (l *TemporalLogger) With(i ...any) ITemporalLogger { //nolint:ireturn
 	return NewTemporalLoggerWith(l.log, i...)
 }
 
