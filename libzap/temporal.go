@@ -4,7 +4,10 @@ import (
 	"fmt"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
+
+const extraKey = "extra"
 
 var temporalCallerSkip = 1 //nolint:gochecknoglobals
 
@@ -47,18 +50,19 @@ func NewTemporalLoggerWith(log *zap.Logger, i ...any) *TemporalLogger {
 
 func (l *TemporalLogger) Error(s string, i ...any) {
 	l.log.Error(fmt.Sprintf(s, i...))
+	l.log.Log(zapcore.ErrorLevel, s, zap.Any(extraKey, i))
 }
 
 func (l *TemporalLogger) Warn(s string, i ...any) {
-	l.log.Warn(fmt.Sprintf(s, i...))
+	l.log.Log(zapcore.WarnLevel, s, zap.Any(extraKey, i))
 }
 
 func (l *TemporalLogger) Info(s string, i ...any) {
-	l.log.Info(fmt.Sprintf(s, i...))
+	l.log.Log(zapcore.InfoLevel, s, zap.Any(extraKey, i))
 }
 
 func (l *TemporalLogger) Debug(s string, i ...any) {
-	l.log.Debug(fmt.Sprintf(s, i...))
+	l.log.Log(zapcore.DebugLevel, s, zap.Any(extraKey, i))
 }
 
 func (l *TemporalLogger) WithCallerSkip(i int) ITemporalLogger { //nolint:ireturn

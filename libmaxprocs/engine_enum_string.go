@@ -19,8 +19,9 @@ const _EngineEnum_name = "unknowndisabledautodirect"
 var _EngineEnum_index = [...]uint8{0, 7, 15, 19, 25}
 
 func (i EngineEnum) String() string {
-	if i < 0 || i >= EngineEnum(len(_EngineEnum_index)-1) {
+	idx := int(i) - 0
+	if i < 0 || idx >= len(_EngineEnum_index)-1 {
 		return "EngineEnum(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _EngineEnum_name[_EngineEnum_index[i]:_EngineEnum_index[i+1]]
+	return _EngineEnum_name[_EngineEnum_index[idx]:_EngineEnum_index[idx+1]]
 }

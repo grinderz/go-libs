@@ -19,8 +19,9 @@ const _OutputEnum_name = "unknownstdoutstderrfile"
 var _OutputEnum_index = [...]uint8{0, 7, 13, 19, 23}
 
 func (i OutputEnum) String() string {
-	if i < 0 || i >= OutputEnum(len(_OutputEnum_index)-1) {
+	idx := int(i) - 0
+	if i < 0 || idx >= len(_OutputEnum_index)-1 {
 		return "OutputEnum(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _OutputEnum_name[_OutputEnum_index[i]:_OutputEnum_index[i+1]]
+	return _OutputEnum_name[_OutputEnum_index[idx]:_OutputEnum_index[idx+1]]
 }

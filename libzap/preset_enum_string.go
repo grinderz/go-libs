@@ -18,8 +18,9 @@ const _PresetEnum_name = "unknowndevelopmentproduction"
 var _PresetEnum_index = [...]uint8{0, 7, 18, 28}
 
 func (i PresetEnum) String() string {
-	if i < 0 || i >= PresetEnum(len(_PresetEnum_index)-1) {
+	idx := int(i) - 0
+	if i < 0 || idx >= len(_PresetEnum_index)-1 {
 		return "PresetEnum(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _PresetEnum_name[_PresetEnum_index[i]:_PresetEnum_index[i+1]]
+	return _PresetEnum_name[_PresetEnum_index[idx]:_PresetEnum_index[idx+1]]
 }

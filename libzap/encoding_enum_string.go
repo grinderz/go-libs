@@ -18,8 +18,9 @@ const _EncodingEnum_name = "unknownconsolejson"
 var _EncodingEnum_index = [...]uint8{0, 7, 14, 18}
 
 func (i EncodingEnum) String() string {
-	if i < 0 || i >= EncodingEnum(len(_EncodingEnum_index)-1) {
+	idx := int(i) - 0
+	if i < 0 || idx >= len(_EncodingEnum_index)-1 {
 		return "EncodingEnum(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _EncodingEnum_name[_EncodingEnum_index[i]:_EncodingEnum_index[i+1]]
+	return _EncodingEnum_name[_EncodingEnum_index[idx]:_EncodingEnum_index[idx+1]]
 }

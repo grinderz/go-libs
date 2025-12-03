@@ -19,8 +19,9 @@ const _HeaderTypeEnum_name = "unknowncpioxzgz"
 var _HeaderTypeEnum_index = [...]uint8{0, 7, 11, 13, 15}
 
 func (i HeaderTypeEnum) String() string {
-	if i < 0 || i >= HeaderTypeEnum(len(_HeaderTypeEnum_index)-1) {
+	idx := int(i) - 0
+	if i < 0 || idx >= len(_HeaderTypeEnum_index)-1 {
 		return "HeaderTypeEnum(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _HeaderTypeEnum_name[_HeaderTypeEnum_index[i]:_HeaderTypeEnum_index[i+1]]
+	return _HeaderTypeEnum_name[_HeaderTypeEnum_index[idx]:_HeaderTypeEnum_index[idx+1]]
 }
