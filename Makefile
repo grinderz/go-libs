@@ -2,7 +2,7 @@ MAKEFLAGS += --warn-undefined-variables
 
 TEST_COVERAGE_THRESHOLD ?= 4
 PRE_COMMIT_VERSION := 4.5
-GOLANGCI_LINT_VERSION := 2.6.2
+GOLANGCI_LINT_VERSION := 2.11.3
 GOTESTSUM_VERSION := 1.13.0
 GOLANGCI_LINT_TIMEOUT := 5m
 SHELL := /usr/bin/env bash -o errtrace -o pipefail -o noclobber -o errexit -o nounset
