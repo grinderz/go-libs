@@ -49,12 +49,16 @@ func TestWrapAddsStackOverNoStack(t *testing.T) {
 	}
 }
 
-func TestWrapNilDocumented(t *testing.T) {
+func TestWrapNilReturnsNil(t *testing.T) {
 	t.Parallel()
 
-	// Documented behavior: Wrap(nil) is a non-nil *Error wrapping nil.
-	if got := zerr.Wrap(nil).Error(); got != "" {
-		t.Errorf("Wrap(nil).Error() = %q, want empty", got)
+	// Wrap(nil) and WrapNoStack(nil) return a nil *Error.
+	if got := zerr.Wrap(nil); got != nil {
+		t.Errorf("Wrap(nil) = %v, want nil", got)
+	}
+
+	if got := zerr.WrapNoStack(nil); got != nil {
+		t.Errorf("WrapNoStack(nil) = %v, want nil", got)
 	}
 }
 

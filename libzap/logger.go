@@ -14,12 +14,11 @@ import (
 
 var _logger *zap.Logger //nolint:gochecknoglobals
 
-// Logger returns the logger installed by Setup/SetupFromLogger, or a no-op
-// logger before that — callers chaining .With() must not panic at package
-// init time.
+// Logger returns the logger installed by Setup/SetupFromLogger.
+// It panics if called before setup.
 func Logger() *zap.Logger {
 	if _logger == nil {
-		return zap.NewNop()
+		panic("logger: libzap.Logger() called before Setup()")
 	}
 
 	return _logger

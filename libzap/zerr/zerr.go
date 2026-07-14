@@ -96,9 +96,12 @@ func (e *Error) log(logger *zap.Logger, level zapcore.Level, message string) {
 }
 
 // Wrap wraps err into *Error, attaching fields and a stacktrace unless the
-// chain already carries one. Note: Wrap(nil) returns a non-nil *Error whose
-// Error() is ""; check err != nil before wrapping.
+// chain already carries one. Wrap(nil) returns nil.
 func Wrap(err error, fields ...zap.Field) *Error {
+	if err == nil {
+		return nil
+	}
+
 	return wrapWithStack(1, err, fields...)
 }
 
@@ -130,9 +133,12 @@ func wrapWithStack(lvl int, err error, fields ...zap.Field) *Error {
 }
 
 // WrapNoStack wraps err into *Error without attaching a stacktrace.
-// Note: WrapNoStack(nil) returns a non-nil *Error whose Error() is "";
-// check err != nil before wrapping.
+// WrapNoStack(nil) returns nil.
 func WrapNoStack(err error, fields ...zap.Field) *Error {
+	if err == nil {
+		return nil
+	}
+
 	// Clone so later caller appends never mutate the stored fields.
 	return &Error{
 		err:      err,

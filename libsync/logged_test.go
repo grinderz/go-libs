@@ -1,12 +1,23 @@
 package libsync_test
 
 import (
+	"os"
 	"strings"
 	"sync"
 	"testing"
 
 	"github.com/grinderz/go-libs/libsync"
+	"github.com/grinderz/go-libs/libzap"
+	"go.uber.org/zap"
 )
+
+func TestMain(m *testing.M) {
+	if err := libzap.SetupFromLogger(zap.NewNop()); err != nil {
+		panic(err)
+	}
+
+	os.Exit(m.Run())
+}
 
 func exercise(t *testing.T, debug bool) {
 	t.Helper()

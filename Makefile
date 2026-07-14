@@ -21,7 +21,20 @@ SHELLCHECK_DIR_EXCLUDE ?= \
 
 ARGS ?=
 
+
 ##@ General
+
+
+# The help target prints out all targets with their descriptions organized
+# beneath their categories. The categories are represented by '##@' and the
+# target descriptions by '##'. The awk command is responsible for reading the
+# entire set of makefiles included in this invocation, looking for lines of the
+# file as xyz: ## something, and then pretty-format the target and help. Then,
+# if there's a line with ##@ something, that gets pretty-printed as a category.
+# More info on the usage of ANSI control characters for terminal formatting:
+# https://en.wikipedia.org/wiki/ANSI_escape_code#SGR_parameters
+# More info on the awk command:
+# http://linuxcommand.org/lc3_adv_awk.php
 
 .DEFAULT_GOAL := help
 .PHONY: help
@@ -37,7 +50,9 @@ $(ARTIFACTS_DIR):
 clean: ## Cleanup
 	@rm -rf "$(ARTIFACTS_DIR)"
 
+
 ##@ Development
+
 
 .PHONY: go.generate
 go.generate: ## Go generate recursive
@@ -51,7 +66,9 @@ go.format: ## Format the source code
 	go run golang.org/x/tools/cmd/goimports@latest -l -w .
 	go run github.com/daixiang0/gci@latest write --skip-generated -s standard -s default .
 
+
 ##@ Lint
+
 
 .PHONY: lint.docker.golangci
 lint.docker.golangci: ## Run golangci-lint in docker
@@ -90,7 +107,9 @@ lint.gitattributes: ## Run gitattributes check
 .PHONY: lint
 lint: lint.golangci lint.shellcheck lint.gitattributes lint.pre-commit ## Run all linters
 
+
 ##@ Tests
+
 
 .PHONY: test
 test: ## Run tests
@@ -105,7 +124,9 @@ test.coverage: $(ARTIFACTS_DIR) test ## Run tests with coverage report
 	go tool cover -func=$(ARTIFACTS_DIR)/coverage.out
 	./scripts/check-coverage.sh $(ARTIFACTS_DIR)/coverage.out $(TEST_COVERAGE_THRESHOLD)
 
-##@ Go Deps
+
+##@ Deps
+
 
 .PHONY: deps.update.all.patch
 deps.update.all.patch: ## Update all deps to latest patch
