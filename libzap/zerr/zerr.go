@@ -6,8 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type Error struct {
@@ -17,7 +19,7 @@ type Error struct {
 }
 
 func (e *Error) Error() string {
-	if e.err == nil {
+	if e == nil || e.err == nil {
 		return ""
 	}
 
@@ -25,6 +27,10 @@ func (e *Error) Error() string {
 }
 
 func (e *Error) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+
 	return e.err
 }
 
@@ -34,72 +40,83 @@ func IsError(err error) bool {
 }
 
 func (e *Error) Fields() []zap.Field {
-	fields := e.fields
+	if e == nil {
+		return nil
+	}
+
+	// Clone so appends never write into the shared backing array of e.fields.
+	fields := slices.Clone(e.fields)
 	err := e
 
-	for errors.As(err.err, &err) {
+	// The err != nil guard stops on a typed-nil *Error in the chain.
+	for errors.As(err.err, &err) && err != nil {
 		fields = append(fields, err.fields...)
 	}
 
 	return fields
 }
 
-func (e *Error) WithField(f zap.Field, fields ...zap.Field) *Error {
+func (e *Error) WithField(field zap.Field, fields ...zap.Field) *Error {
+	hasStack := false
+	if e != nil {
+		hasStack = e.hasStack
+	}
+
+	// Clone so the append never writes into a caller-owned backing array.
 	return &Error{
 		err:      e,
-		fields:   append(fields, f),
-		hasStack: e.hasStack,
+		fields:   append(slices.Clone(fields), field),
+		hasStack: hasStack,
 	}
 }
 
 func (e *Error) LogError(logger *zap.Logger, message string) {
-	if e == nil {
-		return
-	}
-
-	if logger == nil {
-		fmt.Fprintf(os.Stderr, "[error] %s %+v %+v\n", message, e.Error(), e.Fields())
-		return
-	}
-
-	if message == "" {
-		logger.Error(e.Error(), e.Fields()...)
-	} else {
-		logger.Error(fmt.Sprintf("%s: %v", message, e.Error()), e.Fields()...)
-	}
+	e.log(logger, zapcore.ErrorLevel, message)
 }
 
 func (e *Error) LogWarn(logger *zap.Logger, message string) {
+	e.log(logger, zapcore.WarnLevel, message)
+}
+
+func (e *Error) log(logger *zap.Logger, level zapcore.Level, message string) {
 	if e == nil {
 		return
 	}
 
 	if logger == nil {
-		fmt.Fprintf(os.Stderr, "[warn] %s %+v %+v\n", message, e.Error(), e.Fields())
+		fmt.Fprintf(os.Stderr, "[%s] %s %+v %+v\n", level, message, e.Error(), e.Fields())
 		return
 	}
 
 	if message == "" {
-		logger.Warn(e.Error(), e.Fields()...)
+		logger.Log(level, e.Error(), e.Fields()...)
 	} else {
-		logger.Warn(fmt.Sprintf("%s: %v", message, e.Error()), e.Fields()...)
+		logger.Log(level, fmt.Sprintf("%s: %v", message, e.Error()), e.Fields()...)
 	}
 }
 
+// Wrap wraps err into *Error, attaching fields and a stacktrace unless the
+// chain already carries one. Note: Wrap(nil) returns a non-nil *Error whose
+// Error() is ""; check err != nil before wrapping.
 func Wrap(err error, fields ...zap.Field) *Error {
 	return wrapWithStack(1, err, fields...)
 }
 
 func wrapWithStack(lvl int, err error, fields ...zap.Field) *Error {
-	var zerr *Error
-	if errors.As(err, &zerr) && len(fields) == 0 {
+	// Identity check only: errors.As here would return an inner *Error and
+	// drop the outer wrapping context.
+	zerr, ok := err.(*Error) //nolint:errorlint // identity check is intentional
+	if ok && zerr != nil && len(fields) == 0 && zerr.hasStack {
 		return zerr
 	}
 
 	hasStack := false
-	if errors.As(err, &zerr) {
+	if errors.As(err, &zerr) && zerr != nil {
 		hasStack = zerr.hasStack
 	}
+
+	// Clone so the append never writes into a caller-owned backing array.
+	fields = slices.Clone(fields)
 
 	if !hasStack {
 		fields = append(fields, zap.StackSkip("zerr_stacktrace", lvl+1))
@@ -112,10 +129,14 @@ func wrapWithStack(lvl int, err error, fields ...zap.Field) *Error {
 	}
 }
 
+// WrapNoStack wraps err into *Error without attaching a stacktrace.
+// Note: WrapNoStack(nil) returns a non-nil *Error whose Error() is "";
+// check err != nil before wrapping.
 func WrapNoStack(err error, fields ...zap.Field) *Error {
+	// Clone so later caller appends never mutate the stored fields.
 	return &Error{
 		err:      err,
-		fields:   fields,
+		fields:   slices.Clone(fields),
 		hasStack: false,
 	}
 }

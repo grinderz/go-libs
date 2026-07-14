@@ -27,7 +27,7 @@ func findZeroFooterSize(inFile *os.File, buffSize int) (int64, error) {
 
 		totalRead += int64(readBytes)
 
-		for _, b := range buff {
+		for _, b := range buff[:readBytes] {
 			if b != zeroByte {
 				if _, err := inFile.Seek(-totalRead+index, 1); err != nil {
 					return 0, fmt.Errorf("file seek: %w", err)

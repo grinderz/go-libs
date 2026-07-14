@@ -1,6 +1,7 @@
 package cpiopatcher
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -76,7 +77,7 @@ func (p *Patcher) Patch(patterns []*patcher.Pattern, backup bool) {
 
 		cpioFilePath := filepath.Join(p.tempDir, p.fileName+".cpio")
 
-		cpioFile, err := os.Create(cpioFilePath)
+		cpioFile, err = os.Create(cpioFilePath)
 		if err != nil {
 			p.result <- patcher.NewError(
 				p.path,
@@ -211,7 +212,7 @@ func (p *Patcher) unpack(rawFile, inFile *os.File, fileType libcpio.HeaderTypeEn
 			zap.Stringer("file_type", fileType),
 		)
 
-		if err := libio.UnpackXZ(rawFile, inFile); err != nil {
+		if err := libio.UnpackXZ(rawFile, inFile, maxDecompressBytes); err != nil {
 			return fmt.Errorf("unpack xz: %w", err)
 		}
 	case libcpio.HeaderTypeGZ:
@@ -235,6 +236,14 @@ func (p *Patcher) patch(rawFile *os.File, patterns []*patcher.Pattern) (int, err
 	var replaced int
 
 	for patternIndex, pattern := range patterns {
+		if err := pattern.Validate(); err != nil {
+			// Validate already attaches pattern_description.
+			return 0, zerr.Wrap(
+				fmt.Errorf("validate pattern: %w", err),
+				zap.Int("pattern_index", patternIndex),
+			)
+		}
+
 		p.logger.Info(
 			fmt.Sprintf("%s: search %d [%s]", p.path, patternIndex, pattern.Description),
 			zap.String("path", p.path),
@@ -295,6 +304,26 @@ func (p *Patcher) patch(rawFile *os.File, patterns []*patcher.Pattern) (int, err
 	return replaced, nil
 }
 
+// discardOut drops the temporary pack output after a failure.
+func (p *Patcher) discardOut(outFile *os.File, outPath string) {
+	if err := outFile.Close(); err != nil && !errors.Is(err, os.ErrClosed) {
+		zerr.Wrap(err).WithField(
+			zap.String("out_path", outPath),
+		).LogError(p.logger, "out file close failed")
+	}
+
+	if err := os.Remove(outPath); err != nil {
+		zerr.Wrap(err).WithField(
+			zap.String("out_path", outPath),
+		).LogError(p.logger, "out file remove failed")
+	}
+}
+
+// pack writes the packed result to a temporary file next to the original and
+// atomically replaces the original only after packing fully succeeds, so a
+// failed pack never destroys the input. The replacement is a new inode:
+// ownership is not preserved, other hard links keep the old content, and a
+// symlinked path is replaced by a regular file.
 func (p *Patcher) pack(rawFile, inFile, cpioFile *os.File, backup bool) error {
 	if backup {
 		if err := p.backup(inFile); err != nil {
@@ -306,20 +335,40 @@ func (p *Patcher) pack(rawFile, inFile, cpioFile *os.File, backup bool) error {
 		return fmt.Errorf("raw file seek: %w", err)
 	}
 
-	if _, err := inFile.Seek(0, 0); err != nil {
-		return fmt.Errorf("in file seek: %w", err)
+	inInfo, err := inFile.Stat()
+	if err != nil {
+		return fmt.Errorf("in file stat: %w", err)
 	}
 
-	if err := inFile.Truncate(0); err != nil {
-		return fmt.Errorf("in file truncate: %w", err)
+	outPath := p.path + ".tmp"
+
+	outFile, err := os.OpenFile(outPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, inInfo.Mode().Perm())
+	if err != nil {
+		return fmt.Errorf("create out file: %w", err)
 	}
+
+	// O_CREATE filters the mode through the process umask; restore the
+	// original permissions explicitly so rename installs an exact copy.
+	if err := outFile.Chmod(inInfo.Mode().Perm()); err != nil {
+		p.discardOut(outFile, outPath)
+
+		return fmt.Errorf("out file chmod: %w", err)
+	}
+
+	committed := false
+
+	defer func() {
+		if !committed {
+			p.discardOut(outFile, outPath)
+		}
+	}()
 
 	if cpioFile != nil {
 		if _, err := cpioFile.Seek(0, 0); err != nil {
 			return fmt.Errorf("cpio file seek: %w", err)
 		}
 
-		if err := libcpio.WriteHeader(inFile, cpioFile, p.cpioZeroFooterSize); err != nil {
+		if err := libcpio.WriteHeader(outFile, cpioFile, p.cpioZeroFooterSize); err != nil {
 			return fmt.Errorf("cpio header write: %w", err)
 		}
 	}
@@ -329,9 +378,23 @@ func (p *Patcher) pack(rawFile, inFile, cpioFile *os.File, backup bool) error {
 		zap.String("path", p.path),
 	)
 
-	if err := libio.PackGZ(inFile, rawFile); err != nil {
+	if err := libio.PackGZ(outFile, rawFile); err != nil {
 		return fmt.Errorf("pack gz: %w", err)
 	}
+
+	if err := outFile.Sync(); err != nil {
+		return fmt.Errorf("out file sync: %w", err)
+	}
+
+	if err := outFile.Close(); err != nil {
+		return fmt.Errorf("out file close: %w", err)
+	}
+
+	if err := os.Rename(outPath, p.path); err != nil {
+		return fmt.Errorf("rename out file: %w", err)
+	}
+
+	committed = true
 
 	return nil
 }

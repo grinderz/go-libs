@@ -4,9 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"strings"
 
-	"github.com/grinderz/go-libs/liberrors"
+	"github.com/grinderz/go-libs/libenum"
 	"github.com/grinderz/go-libs/libzap/zerr"
 	"go.uber.org/zap"
 )
@@ -37,23 +36,18 @@ const (
 	HeaderTypeGZ      HeaderTypeEnum = iota // gz
 )
 
+var headerTypeNames = map[string]HeaderTypeEnum{ //nolint:gochecknoglobals
+	"cpio": HeaderTypeCPIO,
+	"xz":   HeaderTypeXZ,
+	"gz":   HeaderTypeGZ,
+}
+
 func (ht *HeaderTypeEnum) SetValue(value string) error {
-	headerType := HeaderTypeFromString(value)
-	if headerType == HeaderTypeUnknown {
-		return liberrors.NewInvalidStringEntityError("cpio_header_type", value)
-	}
-
-	*ht = headerType
-
-	return nil
+	return libenum.SetValue(ht, "cpio_header_type", value, HeaderTypeFromString)
 }
 
 func (ht HeaderTypeEnum) MarshalText() ([]byte, error) {
-	if ht == HeaderTypeUnknown {
-		return nil, liberrors.NewInvalidStringEntityError("cpio_header_type", ht.String())
-	}
-
-	return []byte(ht.String()), nil
+	return libenum.MarshalText(ht, "cpio_header_type")
 }
 
 func (ht *HeaderTypeEnum) UnmarshalText(text []byte) error {
@@ -61,16 +55,7 @@ func (ht *HeaderTypeEnum) UnmarshalText(text []byte) error {
 }
 
 func HeaderTypeFromString(value string) HeaderTypeEnum {
-	switch strings.ToLower(value) {
-	case "cpio":
-		return HeaderTypeCPIO
-	case "xz":
-		return HeaderTypeXZ
-	case "gz":
-		return HeaderTypeGZ
-	default:
-		return HeaderTypeUnknown
-	}
+	return libenum.FromString(headerTypeNames, value)
 }
 
 func HeaderTypeFromReader(r io.Reader) (HeaderTypeEnum, error) {
