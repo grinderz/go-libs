@@ -17,7 +17,10 @@ var _ IMutex = (*LoggedMutex)(nil)
 type LoggedMutex struct {
 	sync.Mutex
 
-	cfg    *Config
+	cfg *Config
+	// debug is snapshotted at construction: re-reading a shared flag per
+	// operation would let a runtime toggle desync Lock from its Unlock.
+	debug  bool
 	holder atomic.Value
 	logger *zap.Logger
 }
@@ -25,6 +28,7 @@ type LoggedMutex struct {
 func NewLoggedMutex(cfg *Config) *LoggedMutex {
 	mutex := &LoggedMutex{
 		cfg:    cfg,
+		debug:  cfg.Log.Debug,
 		logger: libzap.Logger().With(libzap.FieldPkg("sync_mutex")),
 	}
 	mutex.holder.Store(holder{})
@@ -34,10 +38,20 @@ func NewLoggedMutex(cfg *Config) *LoggedMutex {
 
 func (m *LoggedMutex) Lock() {
 	m.Mutex.Lock()
-	m.holder.Store(getHolder())
+
+	// Holder tracking costs runtime.Caller + runtime.Stack per lock, so it
+	// is paid only in debug mode.
+	if m.debug {
+		m.holder.Store(getHolder())
+	}
 }
 
 func (m *LoggedMutex) Unlock() {
+	if !m.debug {
+		m.Mutex.Unlock()
+		return
+	}
+
 	currentHolderRaw := m.holder.Load()
 
 	currentHolder, ok := currentHolderRaw.(holder)
@@ -50,7 +64,8 @@ func (m *LoggedMutex) Unlock() {
 		if duration >= m.cfg.Log.Threshold {
 			holder := getHolder()
 			m.logger.Debug(
-				fmt.Sprintf("mutex held for %v, locked at %s unlocked at %s",
+				fmt.Sprintf(
+					"mutex held for %v, locked at %s unlocked at %s",
 					duration,
 					currentHolder.at,
 					holder.at,

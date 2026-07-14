@@ -1,8 +1,6 @@
 package libzap
 
 import (
-	"fmt"
-
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -49,7 +47,6 @@ func NewTemporalLoggerWith(log *zap.Logger, i ...any) *TemporalLogger {
 }
 
 func (l *TemporalLogger) Error(s string, i ...any) {
-	l.log.Error(fmt.Sprintf(s, i...))
 	l.log.Log(zapcore.ErrorLevel, s, zap.Any(extraKey, i))
 }
 

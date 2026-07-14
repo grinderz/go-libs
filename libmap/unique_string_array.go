@@ -1,14 +1,19 @@
 package libmap
 
-import "strings"
+import (
+	"maps"
+	"slices"
+	"strings"
+)
 
-type UniqueStringArray map[string]any
+type UniqueStringArray map[string]struct{}
 
 func (a UniqueStringArray) Set(s string) error {
-	(a)[s] = nil
+	a[s] = struct{}{}
 	return nil
 }
 
+// String returns the keys sorted, so the output is deterministic.
 func (a UniqueStringArray) String() string {
-	return strings.Join(MapKeysAsStrings(a), "|")
+	return strings.Join(slices.Sorted(maps.Keys(a)), "|")
 }

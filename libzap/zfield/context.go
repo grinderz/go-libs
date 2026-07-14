@@ -13,9 +13,14 @@ var contextKey = libctx.Key("zap_field") //nolint:gochecknoglobals
 // If the parent context had any zap.Field's they will be kept.
 func Context(ctx context.Context, fields ...zap.Field) context.Context {
 	old := GetFields(ctx)
-	fields = append(old, fields...)
 
-	return context.WithValue(ctx, contextKey, fields)
+	// Fresh slice: appending to the parent's slice would share its backing
+	// array, so sibling contexts would overwrite each other's fields.
+	merged := make([]zap.Field, 0, len(old)+len(fields))
+	merged = append(merged, old...)
+	merged = append(merged, fields...)
+
+	return context.WithValue(ctx, contextKey, merged)
 }
 
 // GetFields returns the zap.Field's stored in the context or nil if none are found.

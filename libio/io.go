@@ -2,6 +2,7 @@ package libio
 
 import (
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -61,17 +62,29 @@ func CloneReader(reader io.Reader, dst string) error {
 	return nil
 }
 
-func UnpackXZ(dst io.Writer, reader io.Reader) error {
+// copyLimited copies src into dst refusing streams larger than
+// maxDecompressBytes. It reads limit+1 bytes, so io.EOF within that window
+// means the stream fits (a stream of exactly the limit is accepted).
+func copyLimited(dst io.Writer, src io.Reader, maxDecompressBytes int64) error {
+	written, err := io.CopyN(dst, src, maxDecompressBytes+1)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return fmt.Errorf("copy: %w", err)
+	}
+
+	if written > maxDecompressBytes {
+		return newUnpackMaxDecompressLimitReachedError(written, maxDecompressBytes)
+	}
+
+	return nil
+}
+
+func UnpackXZ(dst io.Writer, reader io.Reader, maxDecompressBytes int64) error {
 	xzReader, err := xz.NewReader(reader, 0)
 	if err != nil {
 		return fmt.Errorf("new reader: %w", err)
 	}
 
-	if _, err = io.Copy(dst, xzReader); err != nil {
-		return fmt.Errorf("copy: %w", err)
-	}
-
-	return nil
+	return copyLimited(dst, xzReader, maxDecompressBytes)
 }
 
 func UnpackGZ(dst io.Writer, reader io.Reader, maxDecompressBytes int64) error {
@@ -82,37 +95,25 @@ func UnpackGZ(dst io.Writer, reader io.Reader, maxDecompressBytes int64) error {
 
 	defer func() {
 		if err := gzReader.Close(); err != nil {
-			zerr.Wrap(err).WithField(
-				zap.String("gz_reader", gzReader.Name),
-			).LogError(libzap.Logger(), "gz reader close failed")
+			zerr.Wrap(err).LogError(libzap.Logger(), "gz reader close failed")
 		}
 	}()
 
-	written, err := io.CopyN(dst, gzReader, maxDecompressBytes)
-	if err != nil {
-		return fmt.Errorf("copy: %w", err)
-	}
-
-	if written >= maxDecompressBytes {
-		return newUnpackMaxDecompressLimitReachedError(written, maxDecompressBytes)
-	}
-
-	return nil
+	return copyLimited(dst, gzReader, maxDecompressBytes)
 }
 
 func PackGZ(dst io.Writer, reader io.Reader) error {
 	gzWriter := gzip.NewWriter(dst)
 
-	defer func() {
-		if err := gzWriter.Close(); err != nil {
-			zerr.Wrap(err).WithField(
-				zap.String("gz_writer", gzWriter.Name),
-			).LogError(libzap.Logger(), "gz writer close failed")
-		}
-	}()
-
 	if _, err := io.Copy(gzWriter, reader); err != nil {
+		_ = gzWriter.Close()
 		return fmt.Errorf("copy: %w", err)
+	}
+
+	// Close flushes the remaining data and the gzip footer — a swallowed
+	// error here means silently truncated output.
+	if err := gzWriter.Close(); err != nil {
+		return fmt.Errorf("gz writer close: %w", err)
 	}
 
 	return nil

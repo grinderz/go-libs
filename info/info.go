@@ -48,8 +48,9 @@ func GetInstance() Info {
 
 func newInfo() Info {
 	if version == "" {
-		i, _ := debug.ReadBuildInfo()
-		version = i.Main.Version
+		if buildInfo, ok := debug.ReadBuildInfo(); ok {
+			version = buildInfo.Main.Version
+		}
 	}
 
 	return Info{

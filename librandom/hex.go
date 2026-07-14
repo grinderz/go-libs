@@ -6,8 +6,10 @@ import (
 	"fmt"
 )
 
-func String(length int) (string, error) {
-	b := make([]byte, length)
+// Hex returns a hex-encoded string of bytesLen random bytes,
+// so the resulting string is 2*bytesLen characters long.
+func Hex(bytesLen int) (string, error) {
+	b := make([]byte, bytesLen)
 	if _, err := rand.Read(b); err != nil {
 		return "", fmt.Errorf("rand read: %w", err)
 	}

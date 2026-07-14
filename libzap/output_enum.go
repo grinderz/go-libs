@@ -1,9 +1,7 @@
 package libzap
 
 import (
-	"strings"
-
-	"github.com/grinderz/go-libs/liberrors"
+	"github.com/grinderz/go-libs/libenum"
 )
 
 //go:generate go run golang.org/x/tools/cmd/stringer -type=OutputEnum -linecomment -output output_enum_string.go
@@ -16,23 +14,18 @@ const (
 	OutputFile    OutputEnum = iota // file
 )
 
+var outputNames = map[string]OutputEnum{ //nolint:gochecknoglobals
+	"stdout": OutputStdout,
+	"stderr": OutputStderr,
+	"file":   OutputFile,
+}
+
 func (e *OutputEnum) SetValue(value string) error {
-	output := OutputFromString(value)
-	if output == OutputUnknown {
-		return liberrors.NewInvalidStringEntityError("output", value)
-	}
-
-	*e = output
-
-	return nil
+	return libenum.SetValue(e, "output", value, OutputFromString)
 }
 
 func (e OutputEnum) MarshalText() ([]byte, error) {
-	if e == OutputUnknown {
-		return nil, liberrors.NewInvalidStringEntityError("output", e.String())
-	}
-
-	return []byte(e.String()), nil
+	return libenum.MarshalText(e, "output")
 }
 
 func (e *OutputEnum) UnmarshalText(text []byte) error {
@@ -40,14 +33,5 @@ func (e *OutputEnum) UnmarshalText(text []byte) error {
 }
 
 func OutputFromString(value string) OutputEnum {
-	switch strings.ToLower(value) {
-	case "stdout":
-		return OutputStdout
-	case "stderr":
-		return OutputStderr
-	case "file":
-		return OutputFile
-	default:
-		return OutputUnknown
-	}
+	return libenum.FromString(outputNames, value)
 }

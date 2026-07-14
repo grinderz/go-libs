@@ -26,12 +26,10 @@ func Set(cfg *Config) {
 	case EngineDirect:
 		setDirect(&cfg.Direct, logger)
 	case EngineDisabled, EngineUnknown:
-		fallthrough
-	default:
 	}
 }
 
-func setAuto(cfg *AutoConfig, logger *zap.Logger) int {
+func setAuto(cfg *AutoConfig, logger *zap.Logger) {
 	roundQuotaFn := func(v float64) int {
 		value := int(math.Floor(v))
 
@@ -56,13 +54,22 @@ func setAuto(cfg *AutoConfig, logger *zap.Logger) int {
 		zerr.Wrap(err).LogError(logger, "maxprocs: Set failed")
 		undoFun()
 	}
-
-	return 0
 }
 
 func setDirect(cfg *DirectConfig, logger *zap.Logger) {
 	if maxProcs, exists := os.LookupEnv(maxProcsKey); exists {
 		logger.Info(fmt.Sprintf("maxprocs: Honoring GOMAXPROCS=%q as set in environment", maxProcs))
+		return
+	}
+
+	// GOMAXPROCS(n < 1) only reads the current value, so a zero-value config
+	// would silently change nothing.
+	if cfg.Value < 1 {
+		logger.Error(
+			fmt.Sprintf("maxprocs: invalid direct value %d, GOMAXPROCS unchanged", cfg.Value),
+			zap.Int("value", cfg.Value),
+		)
+
 		return
 	}
 

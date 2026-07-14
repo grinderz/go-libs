@@ -1,14 +1,23 @@
 MAKEFLAGS += --warn-undefined-variables
 
-TEST_COVERAGE_THRESHOLD ?= 4
-PRE_COMMIT_VERSION := 4.5
-GOLANGCI_LINT_VERSION := 2.11.3
+TEST_COVERAGE_THRESHOLD ?= 36
+PRE_COMMIT_VERSION := 4.6
+PRE_COMMIT_CMD ?= uvx pre-commit@$(PRE_COMMIT_VERSION)
+PRE_COMMIT_CFG ?= .pre-commit-config.yaml
+GOLANGCI_LINT_VERSION := 2.12.2
 GOTESTSUM_VERSION := 1.13.0
 GOLANGCI_LINT_TIMEOUT := 5m
 SHELL := /usr/bin/env bash -o errtrace -o pipefail -o noclobber -o errexit -o nounset
-ARTIFACTS_PATH := artifacts
+ARTIFACTS_DIR := artifacts
 GOTESTSUB_ARGS ?= --format testname
 TEST_CMD := go run gotest.tools/gotestsum@v$(GOTESTSUM_VERSION) $(GOTESTSUB_ARGS) --
+TEST_COVERAGE_EXCLUDE ?= (_mock\.go|\/testmocks\/|\.pb\.go)
+GO_MOD_ID = github.com/grinderz/go-libs
+
+SHELLCHECK_DIR_EXCLUDE ?= \
+	-path ./.git \
+	-o -path ./.uv-cache \
+	-o -path ./.go
 
 ARGS ?=
 
@@ -27,28 +36,30 @@ ARGS ?=
 # More info on the awk command:
 # http://linuxcommand.org/lc3_adv_awk.php
 
-DEFAULT_GOAL := help
+.DEFAULT_GOAL := help
 .PHONY: help
 help: ## Display this help screen
-	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9\-\\.%]+:.*?##/ { printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} \
+		/^[a-zA-Z_0-9\-\\.%]+:.*?##/ { printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2 } \
+		/^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
-$(ARTIFACTS_PATH):
+$(ARTIFACTS_DIR):
 	mkdir -p $@
 
 .PHONY: clean
 clean: ## Cleanup
-	@rm -rf "$(ARTIFACTS_PATH)"
+	@rm -rf "$(ARTIFACTS_DIR)"
 
 
 ##@ Development
 
 
-.PHONY: generate
-generate: ## Go generate recursive
+.PHONY: go.generate
+go.generate: ## Go generate recursive
 	go generate ./...
 
-.PHONY: format
-format: ## Format the source code
+.PHONY: go.format
+go.format: ## Format the source code
 	# protogetter --fix ./...
 	go run github.com/segmentio/golines@latest --max-len=120 --no-reformat-tags --ignore-generated --write-output .
 	go run mvdan.cc/gofumpt@latest -l -w -modpath . .
@@ -61,26 +72,40 @@ format: ## Format the source code
 
 .PHONY: lint.docker.golangci
 lint.docker.golangci: ## Run golangci-lint in docker
-	docker run -t --rm -v $$(pwd):/app -v ~/.cache/golangci-lint/v$(GOLANGCI_LINT_VERSION):/root/.cache -w /app golangci/golangci-lint:v$(GOLANGCI_LINT_VERSION) make lint.golangci.bin
+	docker run -t --rm \
+		-v $$(pwd):/app \
+		-v ~/.cache/golangci-lint/v$(GOLANGCI_LINT_VERSION):/root/.cache \
+		-w /app \
+		golangci/golangci-lint:v$(GOLANGCI_LINT_VERSION) \
+		make lint.golangci.bin
 
 .PHONY: lint.golangci
 lint.golangci: ## Run golangci-lint
-	go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v$(GOLANGCI_LINT_VERSION) run --timeout=$(GOLANGCI_LINT_TIMEOUT) --show-stats $(ARGS)
+	go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v$(GOLANGCI_LINT_VERSION) \
+		run --timeout=$(GOLANGCI_LINT_TIMEOUT) --show-stats $(ARGS)
 
 .PHONY: lint.golangci.bin
 lint.golangci.bin: ## Run golangci-lint bin
-	golangci-lint run --timeout=$(GOLANGCI_LINT_TIMEOUT) --show-stats
+	golangci-lint run --timeout=$(GOLANGCI_LINT_TIMEOUT) --show-stats $(ARGS)
 
 .PHONY: lint.shellcheck
 lint.shellcheck: ## Run shellcheck
-	find . -type d \( -path ./git -o -path ./.uv-cache -o -path ./.go \) -prune -o -type f -name '*.sh' -exec shellcheck --format=gcc --severity=warning -s bash {}  +
+	find . -type d \( $(SHELLCHECK_DIR_EXCLUDE) \) -prune \
+		-o -type f -name '*.sh' -exec shellcheck --format=gcc -s bash {} +
 
 .PHONY: lint.pre-commit
 lint.pre-commit: ## Run pre-commit
-	uvx pre-commit@$(PRE_COMMIT_VERSION) run --all-files $(ARGS)
+	$(PRE_COMMIT_CMD) run --all-files --config $(PRE_COMMIT_CFG) $(ARGS)
+
+lint.pre-commit.%: ## Run pre-commit with custom command
+	$(PRE_COMMIT_CMD) $* --config $(PRE_COMMIT_CFG) $(ARGS)
+
+.PHONY: lint.gitattributes
+lint.gitattributes: ## Run gitattributes check
+	scripts/gitattributes-check.sh
 
 .PHONY: lint
-lint: lint.golangci lint.shellcheck lint.pre-commit ## Run all linters
+lint: lint.golangci lint.shellcheck lint.gitattributes lint.pre-commit ## Run all linters
 
 
 ##@ Tests
@@ -88,28 +113,31 @@ lint: lint.golangci lint.shellcheck lint.pre-commit ## Run all linters
 
 .PHONY: test
 test: ## Run tests
-	 $(TEST_CMD) -v -race $(ARGS) ./...
+	 $(TEST_CMD) -v -race $(ARGS) $(GO_MOD_ID)/...
 
-.PHONY: test.coverage ## Run test with coverage report
-test.coverage: ARGS := -tags=coverage -covermode=atomic -coverprofile=$(ARTIFACTS_PATH)/coverage.out.tmp $(ARGS)
-test.coverage: $(ARTIFACTS_PATH) test ## Run tests with coverage
-	grep -v "_mock.go" $(ARTIFACTS_PATH)/coverage.out.tmp >| $(ARTIFACTS_PATH)/coverage.out
-	go tool cover -html=$(ARTIFACTS_PATH)/coverage.out -o $(ARTIFACTS_PATH)/coverage.html
-	go tool cover -func=$(ARTIFACTS_PATH)/coverage.out
-	./scripts/check-coverage.sh $(ARTIFACTS_PATH)/coverage.out $(TEST_COVERAGE_THRESHOLD)
+.PHONY: test.coverage
+test.coverage: ARGS := -tags=coverage -coverpkg=$(GO_MOD_ID)/... -covermode=atomic \
+	-coverprofile=$(ARTIFACTS_DIR)/coverage.out.tmp $(ARGS)
+test.coverage: $(ARTIFACTS_DIR) test ## Run tests with coverage report
+	grep -vE "$(TEST_COVERAGE_EXCLUDE)" $(ARTIFACTS_DIR)/coverage.out.tmp >| $(ARTIFACTS_DIR)/coverage.out
+	go tool cover -html=$(ARTIFACTS_DIR)/coverage.out -o $(ARTIFACTS_DIR)/coverage.html
+	go tool cover -func=$(ARTIFACTS_DIR)/coverage.out
+	./scripts/check-coverage.sh $(ARTIFACTS_DIR)/coverage.out $(TEST_COVERAGE_THRESHOLD)
 
 
-.PHONY: test.docker.alpine
-test.docker.alpine: GO_VERSION := 1.24
-test.docker.alpine: ALPINE_VERSION := 3.21
-test.docker.alpine: ## Run test container in alpine image, you can start test by make test ARGS="-tags=musl,nomsgpack"
-	docker run -ti --rm \
-		-e GOPROXY=https://artifactory.mts.ai/artifactory/go-proxy \
-		-e GONOSUMDB=git.mts.ai/ \
-		-e GOPRIVATE=git.mts.ai/ \
-		-e CGO_ENABLED=1 \
-		-v $$(pwd):/app \
-		-v ~/.netrc:/root/.netrc:ro  \
-		-w /app \
-		artifactory.mts.ai/docker-hub-proxy/golang:$(GO_VERSION)-alpine$(ALPINE_VERSION) \
-		sh -c "apk update && apk add bash make git musl-dev gcc && /bin/bash"
+##@ Deps
+
+
+.PHONY: deps.update.all.patch
+deps.update.all.patch: ## Update all deps to latest patch
+	go get -u=patch ./...
+	go mod tidy
+
+.PHONY: deps.update.all.latest
+deps.update.all.latest: ## Update all deps to latest
+	go get -u ./...
+	go mod tidy
+
+.PHONY: deps.install.tools
+deps.install.tools: ## Install tools from tools.go
+	grep _ tools.go | awk -F'"' '{print $$2}' | xargs -tI % go install %
