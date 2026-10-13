@@ -65,7 +65,7 @@ func setDirect(cfg *DirectConfig, logger *zap.Logger) {
 	// GOMAXPROCS(n < 1) only reads the current value, so a zero-value config
 	// would silently change nothing.
 	if cfg.Value < 1 {
-		logger.Error(
+		logger.Warn(
 			fmt.Sprintf("maxprocs: invalid direct value %d, GOMAXPROCS unchanged", cfg.Value),
 			zap.Int("value", cfg.Value),
 		)
