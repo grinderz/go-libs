@@ -26,7 +26,7 @@ func TestUniqueStringArray(t *testing.T) {
 	}
 
 	keysStr := strings.Join(keys[:], "|")
-	if len(arr.String()) != len(keysStr) {
-		t.Fatalf("str len non valid: %d != %d", len(arr.String()), len(keysStr))
+	if got := arr.String(); got != keysStr {
+		t.Fatalf("str non valid: %q != %q", got, keysStr)
 	}
 }

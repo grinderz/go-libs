@@ -3,11 +3,10 @@ set -o errtrace -o pipefail -o noclobber -o errexit -o nounset
 
 APP="check-coverage"
 
-function exit_error() {
+exit_error() {
   echo "${APP} error: ${1}" >&2
   exit "${2:-1}"
 }
-
 
 PROFILE=${1:-}
 [ -z "${PROFILE}" ] && exit_error "path to profile file is required"
@@ -15,5 +14,5 @@ PROFILE=${1:-}
 THRESHOLD=${2:-}
 [ -z "${THRESHOLD}" ] && exit_error "coverage threshold is not set"
 
-COVERAGE=$(go tool cover -func="$PROFILE" | grep total | awk '{print substr($3, 1, length($3) - 1)}')
+COVERAGE=$(go tool cover -func="$PROFILE" | awk '/^total:/ {sub(/%$/, "", $3); print $3}')
 echo "$COVERAGE $THRESHOLD" | LC_ALL=C awk '{if (!($1 >= $2)) { print "coverage: " $1 "%" ", expected threshold: " $2 "%"; exit 1 } }'

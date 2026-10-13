@@ -1,7 +1,8 @@
 package patcher
 
 import (
-	"bufio"
+	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -10,11 +11,30 @@ import (
 	"go.uber.org/zap"
 )
 
+var ErrPatternLengthMismatch = errors.New("pattern search/replace length mismatch")
+
 type Pattern struct {
 	Description string
 	Count       int
 	Search      []byte
 	Replace     []byte
+}
+
+// Validate checks that Replace is exactly as long as Search: ReplaceBytes
+// overwrites len(Replace) bytes at each match offset, so a longer Replace
+// would corrupt bytes adjacent to the match and a shorter one would leave a
+// tail of the old pattern in place.
+func (p *Pattern) Validate() error {
+	if len(p.Search) != len(p.Replace) {
+		return zerr.Wrap(
+			ErrPatternLengthMismatch,
+			zap.String("pattern_description", p.Description),
+			zap.Int("search_len", len(p.Search)),
+			zap.Int("replace_len", len(p.Replace)),
+		)
+	}
+
+	return nil
 }
 
 type Result struct {
@@ -53,43 +73,52 @@ func ReplaceBytes(file *os.File, offsets []int64, replace []byte) (int, error) {
 	return totalReplaced, nil
 }
 
-func SearchBytes(f io.Reader, find []byte, buffSize int, resultCap int) ([]int64, error) {
+func SearchBytes(reader io.Reader, find []byte, buffSize int, resultCap int) ([]int64, error) {
 	result := make([]int64, 0, resultCap)
 
-	buff := make([]byte, buffSize)
-	reader := bufio.NewReader(f)
 	findLen := len(find)
+	if findLen == 0 {
+		return result, nil
+	}
+
+	// The window keeps the last findLen-1 bytes of the previous read so
+	// matches spanning a read boundary are found.
+	buff := make([]byte, buffSize+findLen-1)
 
 	var (
-		totalRead   int64
-		matchIndex  int
-		readCounter int
-		err         error
+		offset int64 // file position of buff[0]
+		carry  int
 	)
 
 	for {
-		if readCounter, err = reader.Read(buff); err != nil && err != io.EOF {
+		readCounter, err := reader.Read(buff[carry : carry+buffSize])
+		if err != nil && err != io.EOF {
 			return nil, fmt.Errorf("read buffer: %w", err)
 		}
 
-		for ind, b := range buff {
-			if b != find[matchIndex] {
-				matchIndex = 0
-				continue
+		data := buff[:carry+readCounter]
+
+		start := 0
+		for {
+			ind := bytes.Index(data[start:], find)
+			if ind < 0 {
+				break
 			}
 
-			matchIndex++
-			if matchIndex == findLen {
-				result = append(result, totalRead-int64(matchIndex)+int64(ind)+1)
-				matchIndex = 0
-			}
+			result = append(result, offset+int64(start+ind))
+			start += ind + findLen
 		}
-
-		totalRead += int64(readCounter)
 
 		if err == io.EOF {
 			break
 		}
+
+		// Carry at most findLen-1 unconsumed bytes: bytes before start
+		// belong to already reported matches and must not match again.
+		keep := min(findLen-1, len(data)-start)
+		copy(buff, data[len(data)-keep:])
+		offset += int64(len(data) - keep)
+		carry = keep
 	}
 
 	return result, nil

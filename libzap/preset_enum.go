@@ -1,9 +1,7 @@
 package libzap
 
 import (
-	"strings"
-
-	"github.com/grinderz/go-libs/liberrors"
+	"github.com/grinderz/go-libs/libenum"
 )
 
 //go:generate go run golang.org/x/tools/cmd/stringer -type=PresetEnum -linecomment -output preset_enum_string.go
@@ -15,23 +13,17 @@ const (
 	PresetProduction  PresetEnum = iota // production
 )
 
+var presetNames = map[string]PresetEnum{ //nolint:gochecknoglobals
+	"development": PresetDevelopment,
+	"production":  PresetProduction,
+}
+
 func (e *PresetEnum) SetValue(value string) error {
-	preset := PresetFromString(value)
-	if preset == PresetUnknown {
-		return liberrors.NewInvalidStringEntityError("preset", value)
-	}
-
-	*e = preset
-
-	return nil
+	return libenum.SetValue(e, "preset", value, PresetFromString)
 }
 
 func (e PresetEnum) MarshalText() ([]byte, error) {
-	if e == PresetUnknown {
-		return nil, liberrors.NewInvalidStringEntityError("preset", e.String())
-	}
-
-	return []byte(e.String()), nil
+	return libenum.MarshalText(e, "preset")
 }
 
 func (e *PresetEnum) UnmarshalText(text []byte) error {
@@ -39,12 +31,5 @@ func (e *PresetEnum) UnmarshalText(text []byte) error {
 }
 
 func PresetFromString(value string) PresetEnum {
-	switch strings.ToLower(value) {
-	case "development":
-		return PresetDevelopment
-	case "production":
-		return PresetProduction
-	default:
-		return PresetUnknown
-	}
+	return libenum.FromString(presetNames, value)
 }

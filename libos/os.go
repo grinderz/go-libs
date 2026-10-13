@@ -23,9 +23,5 @@ func IsDirExists(path string) (bool, error) {
 		return false, err
 	}
 
-	if stat.IsDir() {
-		return true, nil
-	}
-
-	return false, err
+	return stat.IsDir(), nil
 }
