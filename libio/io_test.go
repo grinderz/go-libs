@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"errors"
+	"math"
 	"testing"
 
 	"github.com/grinderz/go-libs/libio"
@@ -63,6 +64,23 @@ func TestUnpackGZLimits(t *testing.T) {
 
 	if err := libio.UnpackGZ(&out, bytes.NewReader(packed), size-1); err == nil {
 		t.Fatal("over-limit stream must fail")
+	}
+}
+
+func TestUnpackGZMaxInt64Limit(t *testing.T) {
+	t.Parallel()
+
+	const size = 1024
+
+	packed := packGZ(t, bytes.Repeat([]byte("x"), size))
+
+	var out bytes.Buffer
+	if err := libio.UnpackGZ(&out, bytes.NewReader(packed), math.MaxInt64); err != nil {
+		t.Fatalf("unpack with MaxInt64 limit: %v", err)
+	}
+
+	if out.Len() != size {
+		t.Fatalf("written %d, want %d", out.Len(), size)
 	}
 }
 

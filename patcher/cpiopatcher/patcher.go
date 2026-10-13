@@ -42,6 +42,13 @@ func New(temp, path string, result chan<- patcher.Result) *Patcher {
 }
 
 func (p *Patcher) Patch(patterns []*patcher.Pattern, backup bool) {
+	// Validate before touching the file: unpacking can take up to
+	// maxDecompressBytes of temporary space, wasted on an invalid pattern.
+	if err := validatePatterns(patterns); err != nil {
+		p.result <- patcher.NewError(p.path, err)
+		return
+	}
+
 	var inFile, cpioFile, rawFile *os.File
 
 	inFile, err := os.OpenFile(p.path, os.O_RDWR, filePerm)
@@ -182,6 +189,20 @@ func (p *Patcher) Patch(patterns []*patcher.Pattern, backup bool) {
 	p.result <- patcher.NewResult(p.path, replaced)
 }
 
+func validatePatterns(patterns []*patcher.Pattern) error {
+	for patternIndex, pattern := range patterns {
+		if err := pattern.Validate(); err != nil {
+			// Validate already attaches pattern_description.
+			return zerr.Wrap(
+				fmt.Errorf("validate pattern: %w", err),
+				zap.Int("pattern_index", patternIndex),
+			)
+		}
+	}
+
+	return nil
+}
+
 func (p *Patcher) backup(inFile *os.File) error {
 	p.logger.Info(
 		p.path+": backup",
@@ -236,14 +257,6 @@ func (p *Patcher) patch(rawFile *os.File, patterns []*patcher.Pattern) (int, err
 	var replaced int
 
 	for patternIndex, pattern := range patterns {
-		if err := pattern.Validate(); err != nil {
-			// Validate already attaches pattern_description.
-			return 0, zerr.Wrap(
-				fmt.Errorf("validate pattern: %w", err),
-				zap.Int("pattern_index", patternIndex),
-			)
-		}
-
 		p.logger.Info(
 			fmt.Sprintf("%s: search %d [%s]", p.path, patternIndex, pattern.Description),
 			zap.String("path", p.path),

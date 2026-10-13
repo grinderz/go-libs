@@ -1,7 +1,10 @@
 package libzap
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -98,5 +101,45 @@ func TestSetKeysJSON(t *testing.T) {
 
 	if zcfg.EncoderConfig.LevelKey != zapcore.OmitKey {
 		t.Errorf("json empty key must omit the entry, got %q", zcfg.EncoderConfig.LevelKey)
+	}
+}
+
+func TestLoggerFallbackBeforeSetup(t *testing.T) {
+	t.Parallel()
+
+	if _logger != nil {
+		t.Skip("logger already set up")
+	}
+
+	logger := Logger()
+	if logger == nil {
+		t.Fatal("Logger() before setup must return a fallback, got nil")
+	}
+
+	if !logger.Core().Enabled(zapcore.WarnLevel) || logger.Core().Enabled(zapcore.InfoLevel) {
+		t.Error("fallback logger must log warnings and above only")
+	}
+}
+
+func TestSetFileOutputParentRelativeDir(t *testing.T) {
+	t.Parallel()
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	presetCfg := &PresetConfig{
+		OutputFile: OutputFileConfig{Dir: "../logs", TimeLayout: "2006"},
+	}
+	zcfg := &zap.Config{}
+
+	if err := setFileOutput("app", presetCfg, zcfg); err != nil {
+		t.Fatal(err)
+	}
+
+	want := filepath.Join(filepath.Dir(cwd), "logs", "app-"+time.Now().Format("2006")+".log")
+	if len(zcfg.OutputPaths) != 1 || zcfg.OutputPaths[0] != want {
+		t.Errorf("OutputPaths = %v, want [%s]", zcfg.OutputPaths, want)
 	}
 }

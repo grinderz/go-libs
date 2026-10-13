@@ -9,7 +9,8 @@ linters:
   default: all
   disable:
     - depguard
-    - exhaustruct
+    - exhaustruct # deprecated since v2.13.0, replaced by exhaustruct_v5
+    - exhaustruct_v5
     - godox
     - gomodguard # deprecated since v2.12.0, replaced by gomodguard_v2
     - nlreturn

@@ -1,8 +1,8 @@
 module github.com/grinderz/go-libs
 
-go 1.25.0
+go 1.26.0
 
-toolchain go1.26.5
+toolchain go1.26.9
 
 require (
 	github.com/grinderz/gocpio v1.0.2-0.20200707140622-b5c6fe3526ec

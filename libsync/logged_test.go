@@ -32,12 +32,11 @@ func exercise(t *testing.T, debug bool) {
 	rwCounter := 0
 
 	var wg sync.WaitGroup
+
 	for range 4 {
-		wg.Add(1)
 		waitGroup.Add(1)
 
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			defer waitGroup.Done()
 
 			mutex.Lock()
@@ -51,7 +50,7 @@ func exercise(t *testing.T, debug bool) {
 			rwMutex.Lock()
 			rwCounter++
 			rwMutex.Unlock()
-		}()
+		})
 	}
 
 	waitGroup.Wait()

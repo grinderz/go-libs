@@ -35,8 +35,9 @@ func (e *Error) Unwrap() error {
 }
 
 func IsError(err error) bool {
-	var e *Error
-	return errors.As(err, &e)
+	_, ok := errors.AsType[*Error](err)
+
+	return ok
 }
 
 func (e *Error) Fields() []zap.Field {
@@ -56,17 +57,18 @@ func (e *Error) Fields() []zap.Field {
 	return fields
 }
 
+// WithField wraps e with extra fields. A nil e yields nil, the same as
+// Wrap(nil): there is no error to attach the fields to.
 func (e *Error) WithField(field zap.Field, fields ...zap.Field) *Error {
-	hasStack := false
-	if e != nil {
-		hasStack = e.hasStack
+	if e == nil {
+		return nil
 	}
 
 	// Clone so the append never writes into a caller-owned backing array.
 	return &Error{
 		err:      e,
 		fields:   append(slices.Clone(fields), field),
-		hasStack: hasStack,
+		hasStack: e.hasStack,
 	}
 }
 
@@ -96,7 +98,9 @@ func (e *Error) log(logger *zap.Logger, level zapcore.Level, message string) {
 }
 
 // Wrap wraps err into *Error, attaching fields and a stacktrace unless the
-// chain already carries one. Wrap(nil) returns nil.
+// chain already carries one. Wrap(nil) returns a nil *Error: returned as an
+// error interface it is non-nil, so check err before wrapping it in
+// `return zerr.Wrap(err)`.
 func Wrap(err error, fields ...zap.Field) *Error {
 	if err == nil {
 		return nil
@@ -114,8 +118,8 @@ func wrapWithStack(lvl int, err error, fields ...zap.Field) *Error {
 	}
 
 	hasStack := false
-	if errors.As(err, &zerr) && zerr != nil {
-		hasStack = zerr.hasStack
+	if inner, ok := errors.AsType[*Error](err); ok && inner != nil {
+		hasStack = inner.hasStack
 	}
 
 	// Clone so the append never writes into a caller-owned backing array.
@@ -133,7 +137,7 @@ func wrapWithStack(lvl int, err error, fields ...zap.Field) *Error {
 }
 
 // WrapNoStack wraps err into *Error without attaching a stacktrace.
-// WrapNoStack(nil) returns nil.
+// WrapNoStack(nil) returns a nil *Error, with the same caveat as Wrap.
 func WrapNoStack(err error, fields ...zap.Field) *Error {
 	if err == nil {
 		return nil
@@ -148,8 +152,7 @@ func WrapNoStack(err error, fields ...zap.Field) *Error {
 }
 
 func Fields(err error) []zap.Field {
-	var zerr *Error
-	if errors.As(err, &zerr) {
+	if zerr, ok := errors.AsType[*Error](err); ok {
 		return zerr.Fields()
 	}
 

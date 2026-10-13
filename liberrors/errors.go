@@ -41,13 +41,9 @@ func NewCastError(name string, src any, dstType string) error {
 }
 
 func IsCastError(err error) bool {
-	if err == nil {
-		return false
-	}
+	_, ok := errors.AsType[*castError](err)
 
-	var e *castError
-
-	return errors.As(err, &e)
+	return ok
 }
 
 type invalidEntityError struct {
@@ -59,13 +55,9 @@ func (e *invalidEntityError) Error() string {
 }
 
 func IsInvalidEntityError(err error) bool {
-	if err == nil {
-		return false
-	}
+	_, ok := errors.AsType[*invalidEntityError](err)
 
-	var e *invalidEntityError
-
-	return errors.As(err, &e)
+	return ok
 }
 
 func NewInvalidEntityError(name string) error {

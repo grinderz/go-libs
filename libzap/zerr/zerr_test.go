@@ -100,9 +100,8 @@ func TestTypedNilMethodsSafe(t *testing.T) {
 		t.Errorf("Wrap(typed-nil).Error() = %q, want empty", got)
 	}
 
-	z := typedNil.WithField(zap.String("a", "1"))
-	if z == nil || len(z.Fields()) != 1 {
-		t.Errorf("nil.WithField() = %v", z)
+	if z := typedNil.WithField(zap.String("a", "1")); z != nil {
+		t.Errorf("nil.WithField() = %v, want nil", z)
 	}
 }
 

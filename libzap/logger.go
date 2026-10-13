@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/grinderz/go-libs/liberrors"
 	"github.com/grinderz/go-libs/libzap/zerr"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -14,11 +13,20 @@ import (
 
 var _logger *zap.Logger //nolint:gochecknoglobals
 
-// Logger returns the logger installed by Setup/SetupFromLogger.
-// It panics if called before setup.
+// fallbackLogger serves Logger() until Setup/SetupFromLogger runs, so library
+// code that logs on rare error paths neither panics nor loses the message.
+var fallbackLogger = zap.New(zapcore.NewCore( //nolint:gochecknoglobals
+	zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig()),
+	zapcore.Lock(os.Stderr),
+	zapcore.WarnLevel,
+))
+
+// Logger returns the logger installed by Setup/SetupFromLogger. Before setup
+// it returns a fallback that writes warnings and errors to stderr; loggers
+// derived from it (e.g. via With) keep writing there after setup.
 func Logger() *zap.Logger {
 	if _logger == nil {
-		panic("logger: libzap.Logger() called before Setup()")
+		return fallbackLogger
 	}
 
 	return _logger
@@ -265,20 +273,10 @@ func setFileOutput(appID string, presetCfg *PresetConfig, zcfg *zap.Config) erro
 		return nil
 	}
 
-	var dir string
-
-	switch {
-	case filepath.IsLocal(presetCfg.OutputFile.Dir):
-		cwd, err := os.Getwd()
-		if err != nil {
-			return fmt.Errorf("detect working directory: %w", err)
-		}
-
-		dir = filepath.Join(cwd, presetCfg.OutputFile.Dir)
-	case filepath.IsAbs(presetCfg.OutputFile.Dir):
-		dir = presetCfg.OutputFile.Dir
-	default:
-		return liberrors.NewInvalidStringEntityError("output_file_dir", presetCfg.OutputFile.Dir)
+	// A relative dir, ".." included, resolves against the working directory.
+	dir, err := filepath.Abs(presetCfg.OutputFile.Dir)
+	if err != nil {
+		return fmt.Errorf("resolve output file dir: %w", err)
 	}
 
 	runTS := time.Now().Format(presetCfg.OutputFile.TimeLayout)

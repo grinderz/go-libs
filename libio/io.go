@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 
 	"github.com/grinderz/go-libs/libzap"
@@ -66,6 +67,16 @@ func CloneReader(reader io.Reader, dst string) error {
 // maxDecompressBytes. It reads limit+1 bytes, so io.EOF within that window
 // means the stream fits (a stream of exactly the limit is accepted).
 func copyLimited(dst io.Writer, src io.Reader, maxDecompressBytes int64) error {
+	// limit+1 would overflow to a negative count and copy nothing; no stream
+	// can exceed this limit anyway.
+	if maxDecompressBytes == math.MaxInt64 {
+		if _, err := io.Copy(dst, src); err != nil {
+			return fmt.Errorf("copy: %w", err)
+		}
+
+		return nil
+	}
+
 	written, err := io.CopyN(dst, src, maxDecompressBytes+1)
 	if err != nil && !errors.Is(err, io.EOF) {
 		return fmt.Errorf("copy: %w", err)
