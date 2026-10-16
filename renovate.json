@@ -3,6 +3,7 @@
   "extends": [
     "config:recommended"
   ],
+  "semanticCommitType": "chore",
   "baseBranchPatterns": [
     "master"
   ],
