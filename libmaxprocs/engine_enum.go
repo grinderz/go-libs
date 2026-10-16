@@ -1,9 +1,7 @@
 package libmaxprocs
 
 import (
-	"strings"
-
-	"github.com/grinderz/go-libs/liberrors"
+	"github.com/grinderz/go-libs/libenum"
 )
 
 //go:generate go run golang.org/x/tools/cmd/stringer -type=EngineEnum -linecomment -output engine_enum_string.go
@@ -16,23 +14,18 @@ const (
 	EngineDirect   EngineEnum = iota // direct
 )
 
+var engineNames = map[string]EngineEnum{ //nolint:gochecknoglobals
+	"disabled": EngineDisabled,
+	"auto":     EngineAuto,
+	"direct":   EngineDirect,
+}
+
 func (e *EngineEnum) SetValue(value string) error {
-	engine := EngineFromString(value)
-	if engine == EngineUnknown {
-		return liberrors.NewInvalidStringEntityError("libmaxprocs_engine", value)
-	}
-
-	*e = engine
-
-	return nil
+	return libenum.SetValue(e, "libmaxprocs_engine", value, EngineFromString)
 }
 
 func (e EngineEnum) MarshalText() ([]byte, error) {
-	if e == EngineUnknown {
-		return nil, liberrors.NewInvalidStringEntityError("libmaxprocs_engine", e.String())
-	}
-
-	return []byte(e.String()), nil
+	return libenum.MarshalText(e, "libmaxprocs_engine")
 }
 
 func (e *EngineEnum) UnmarshalText(text []byte) error {
@@ -40,14 +33,5 @@ func (e *EngineEnum) UnmarshalText(text []byte) error {
 }
 
 func EngineFromString(value string) EngineEnum {
-	switch strings.ToLower(value) {
-	case "disabled":
-		return EngineDisabled
-	case "auto":
-		return EngineAuto
-	case "direct":
-		return EngineDirect
-	default:
-		return EngineUnknown
-	}
+	return libenum.FromString(engineNames, value)
 }

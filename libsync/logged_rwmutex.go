@@ -20,35 +20,52 @@ var _ IRWMutex = (*LoggedRWMutex)(nil)
 type LoggedRWMutex struct {
 	sync.RWMutex
 
-	cfg    *Config
+	cfg *Config
+	// debug is snapshotted at construction: re-reading a shared flag per
+	// operation would let a runtime toggle desync Lock from its Unlock.
+	debug  bool
 	holder atomic.Value
 	logger *zap.Logger
 
 	readHolders    map[int][]holder
 	readHoldersMut sync.Mutex
 
-	logRUnlockers atomic.Bool
-	rUnlockers    chan holder
+	// waitingWriters counts writers blocked in Lock: a bool would be reset
+	// by the first writer to acquire while another one is still waiting.
+	waitingWriters atomic.Int32
+	rUnlockers     chan holder
 }
 
 func NewLoggedRWMutex(cfg *Config) *LoggedRWMutex {
 	mutex := &LoggedRWMutex{
-		cfg:         cfg,
-		logger:      libzap.Logger().With(libzap.FieldPkg("sync_rwmutex")),
-		readHolders: make(map[int][]holder),
-		rUnlockers:  make(chan holder, unlockersChanSize),
+		cfg:    cfg,
+		debug:  cfg.Log.Debug,
+		logger: libzap.Logger().With(libzap.FieldPkg("sync_rwmutex")),
 	}
+
+	// The tracking structures cost ~48KB per mutex (1024-slot holder
+	// channel), so they exist only in debug mode.
+	if mutex.debug {
+		mutex.readHolders = make(map[int][]holder)
+		mutex.rUnlockers = make(chan holder, unlockersChanSize)
+	}
+
 	mutex.holder.Store(holder{})
 
 	return mutex
 }
 
 func (m *LoggedRWMutex) Lock() {
+	if !m.debug {
+		m.RWMutex.Lock()
+		return
+	}
+
 	start := time.Now()
 
-	m.logRUnlockers.Store(true)
+	m.waitingWriters.Add(1)
 	m.RWMutex.Lock()
-	m.logRUnlockers.Store(false)
+	m.waitingWriters.Add(-1)
 
 	holder := getHolder()
 	m.holder.Store(holder)
@@ -70,7 +87,8 @@ func (m *LoggedRWMutex) Lock() {
 		}
 
 		m.logger.Debug(
-			fmt.Sprintf("rwmutex took %v to lock, locked at %s, runlockers while locking: [%s]",
+			fmt.Sprintf(
+				"rwmutex took %v to lock, locked at %s, runlockers while locking: [%s]",
 				duration,
 				holder.at,
 				strings.Join(unlockerStrings, " | "),
@@ -83,6 +101,11 @@ func (m *LoggedRWMutex) Lock() {
 }
 
 func (m *LoggedRWMutex) Unlock() {
+	if !m.debug {
+		m.RWMutex.Unlock()
+		return
+	}
+
 	currentHolderRaw := m.holder.Load()
 
 	currentHolder, ok := currentHolderRaw.(holder)
@@ -95,7 +118,8 @@ func (m *LoggedRWMutex) Unlock() {
 		if duration >= m.cfg.Log.Threshold {
 			holder := getHolder()
 			m.logger.Debug(
-				fmt.Sprintf("rwmutex held for %v, locked at %s unlocked at %s",
+				fmt.Sprintf(
+					"rwmutex held for %v, locked at %s unlocked at %s",
 					duration,
 					currentHolder.at,
 					holder.at,
@@ -114,6 +138,10 @@ func (m *LoggedRWMutex) Unlock() {
 func (m *LoggedRWMutex) RLock() {
 	m.RWMutex.RLock()
 
+	if !m.debug {
+		return
+	}
+
 	holder := getHolder()
 
 	m.readHoldersMut.Lock()
@@ -122,18 +150,27 @@ func (m *LoggedRWMutex) RLock() {
 }
 
 func (m *LoggedRWMutex) RUnlock() {
+	if !m.debug {
+		m.RWMutex.RUnlock()
+		return
+	}
+
 	id := goID()
 
 	m.readHoldersMut.Lock()
 
 	current := m.readHolders[id]
-	if len(current) > 0 {
+
+	switch {
+	case len(current) > 1:
 		m.readHolders[id] = current[:len(current)-1]
+	case len(current) == 1:
+		delete(m.readHolders, id)
 	}
 
 	m.readHoldersMut.Unlock()
 
-	if m.logRUnlockers.Load() {
+	if m.waitingWriters.Load() > 0 {
 		holder := getHolder()
 		select {
 		case m.rUnlockers <- holder:
@@ -161,13 +198,16 @@ func (m *LoggedRWMutex) Holders() string {
 	}
 
 	var output strings.Builder
-	output.WriteString(holder.String() + " (writer)")
+	output.WriteString(holder.String())
+	output.WriteString(" (writer)")
 
 	m.readHoldersMut.Lock()
 
 	for _, holders := range m.readHolders {
 		for _, holder := range holders {
-			output.WriteString(" | " + holder.String() + " (reader)")
+			output.WriteString(" | ")
+			output.WriteString(holder.String())
+			output.WriteString(" (reader)")
 		}
 	}
 

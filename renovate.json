@@ -1,0 +1,30 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "baseBranchPatterns": [
+    "master"
+  ],
+  "enabledManagers": [
+    "gomod"
+  ],
+  "branchPrefix": "renovate/",
+  "labels": [
+    "dependencies"
+  ],
+  "postUpdateOptions": [
+    "gomodTidy",
+    "gomodUpdateImportPaths"
+  ],
+  "packageRules": [
+    {
+      "description": "the go and toolchain directives are bumped outside Renovate",
+      "matchDepTypes": [
+        "golang",
+        "toolchain"
+      ],
+      "enabled": false
+    }
+  ]
+}

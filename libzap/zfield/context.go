@@ -2,6 +2,7 @@ package zfield
 
 import (
 	"context"
+	"slices"
 
 	"github.com/grinderz/go-libs/libctx"
 	"go.uber.org/zap"
@@ -12,10 +13,10 @@ var contextKey = libctx.Key("zap_field") //nolint:gochecknoglobals
 // Context stores a list of zap.Field in a context.
 // If the parent context had any zap.Field's they will be kept.
 func Context(ctx context.Context, fields ...zap.Field) context.Context {
-	old := GetFields(ctx)
-	fields = append(old, fields...)
-
-	return context.WithValue(ctx, contextKey, fields)
+	// slices.Concat always allocates: appending to the parent's slice would
+	// share its backing array, so sibling contexts would overwrite each
+	// other's fields.
+	return context.WithValue(ctx, contextKey, slices.Concat(GetFields(ctx), fields))
 }
 
 // GetFields returns the zap.Field's stored in the context or nil if none are found.

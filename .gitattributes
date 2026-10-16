@@ -88,3 +88,12 @@
 # modern version of git and editors capable of LF line endings.
 
 *.go -text diff=golang
+
+# Repo files without extension
+.editorconfig  text
+.envrc         text eol=lf
+.gitattributes text
+.gitignore     text
+Makefile       text eol=lf
+go.mod         text eol=lf
+go.sum         text eol=lf

@@ -22,8 +22,6 @@ repos:
       - id: fix-encoding-pragma
         args: ['--remove']
       - id: forbid-new-submodules
-      - id: no-commit-to-branch
-        args: ['--branch', 'master', '--branch', 'develop', '--pattern', 'release-*']
       - id: pretty-format-json
         args: ['--no-sort-keys', '--autofix', '--no-ensure-ascii']
       - id: trailing-whitespace

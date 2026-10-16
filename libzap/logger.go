@@ -13,7 +13,22 @@ import (
 
 var _logger *zap.Logger //nolint:gochecknoglobals
 
+// fallbackLogger serves Logger() until Setup/SetupFromLogger runs, so library
+// code that logs on rare error paths neither panics nor loses the message.
+var fallbackLogger = zap.New(zapcore.NewCore( //nolint:gochecknoglobals
+	zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig()),
+	zapcore.Lock(os.Stderr),
+	zapcore.WarnLevel,
+))
+
+// Logger returns the logger installed by Setup/SetupFromLogger. Before setup
+// it returns a fallback that writes warnings and errors to stderr; loggers
+// derived from it (e.g. via With) keep writing there after setup.
 func Logger() *zap.Logger {
+	if _logger == nil {
+		return fallbackLogger
+	}
+
 	return _logger
 }
 
@@ -216,22 +231,24 @@ func setOutputs(appID string, presetCfg *PresetConfig, zcfg *zap.Config, rcfg *R
 			continue
 		}
 
+		// The file path is appended by setFileOutput; the literal enum name
+		// must never become an output path. Without an appID there is no
+		// file name to build, so the file output is skipped.
 		if output == OutputFile {
-			if rcfg != nil && !rcfg.OutputFileEnabled {
-				continue
-			}
-
-			if len(appID) > 0 {
-				fileEnabled = true
-				continue
-			}
+			fileEnabled = len(appID) > 0 && (rcfg == nil || rcfg.OutputFileEnabled)
+			continue
 		}
 
 		outputs = append(outputs, output.String())
 	}
 
-	if len(outputs) > 0 {
+	// Replace the preset defaults even when only the file output is enabled,
+	// so logs are not duplicated to the default stderr.
+	if len(outputs) > 0 || fileEnabled {
 		zcfg.OutputPaths = outputs
+	}
+
+	if len(outputs) > 0 {
 		zcfg.ErrorOutputPaths = outputs
 	}
 
@@ -239,45 +256,61 @@ func setOutputs(appID string, presetCfg *PresetConfig, zcfg *zap.Config, rcfg *R
 		if err := setFileOutput(appID, presetCfg, zcfg); err != nil {
 			return fmt.Errorf("set file output: %w", err)
 		}
+
+		// setFileOutput skips an unset dir; never leave zero outputs.
+		if len(zcfg.OutputPaths) == 0 {
+			zcfg.OutputPaths = []string{OutputStderr.String()}
+		}
 	}
 
 	return nil
 }
 
 func setFileOutput(appID string, presetCfg *PresetConfig, zcfg *zap.Config) error {
-	var dir string
-
-	if filepath.IsLocal(presetCfg.OutputFile.Dir) {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return fmt.Errorf("detect working directory: %w", err)
-		}
-
-		dir = filepath.Join(cwd, presetCfg.OutputFile.Dir)
-	} else if filepath.IsAbs(presetCfg.OutputFile.Dir) {
-		dir = presetCfg.OutputFile.Dir
+	// An unset dir (zero-value config) skips the file output instead of
+	// failing logger construction.
+	if presetCfg.OutputFile.Dir == "" {
+		return nil
 	}
 
-	if len(dir) > 0 {
-		runTS := time.Now().Format(presetCfg.OutputFile.TimeLayout)
-		location := filepath.Join(dir, fmt.Sprintf("%s-%s.log", appID, runTS))
-
-		if len(location) > 0 {
-			zcfg.OutputPaths = append(zcfg.OutputPaths, location)
-		}
+	// A relative dir, ".." included, resolves against the working directory.
+	dir, err := filepath.Abs(presetCfg.OutputFile.Dir)
+	if err != nil {
+		return fmt.Errorf("resolve output file dir: %w", err)
 	}
+
+	runTS := time.Now().Format(presetCfg.OutputFile.TimeLayout)
+	zcfg.OutputPaths = append(zcfg.OutputPaths, filepath.Join(dir, fmt.Sprintf("%s-%s.log", appID, runTS)))
 
 	return nil
 }
 
+// omitKeySentinel is an explicit "omit this entry" config value. Unlike an
+// empty key, it is distinguishable from an unset field, so it also works for
+// console encoding, where keys are only presence switches.
+const omitKeySentinel = "-"
+
+// setKeys applies the configured entry keys. JSON encoding uses them as
+// field names (an empty key omits the entry). Console encoding keeps the
+// stock layout untouched except for the explicit "-" sentinel, because an
+// unset config key is indistinguishable from an explicitly empty one.
 func setKeys(presetCfg *PresetConfig, zcfg *zap.Config) {
-	if presetCfg.Encoding == EncodingJSON {
-		zcfg.EncoderConfig.TimeKey = presetCfg.JSONTimeKey
-		zcfg.EncoderConfig.MessageKey = presetCfg.JSONMessageKey
-		zcfg.EncoderConfig.StacktraceKey = presetCfg.JSONStacktraceKey
-		zcfg.EncoderConfig.CallerKey = presetCfg.JSONCallerKey
-		zcfg.EncoderConfig.LevelKey = presetCfg.JSONLevelKey
-		zcfg.EncoderConfig.FunctionKey = presetCfg.JSONFunctionKey
-		zcfg.EncoderConfig.NameKey = presetCfg.JSONNameKey
+	jsonEncoding := presetCfg.Encoding == EncodingJSON
+
+	setKey(&zcfg.EncoderConfig.TimeKey, presetCfg.JSONTimeKey, jsonEncoding)
+	setKey(&zcfg.EncoderConfig.MessageKey, presetCfg.JSONMessageKey, jsonEncoding)
+	setKey(&zcfg.EncoderConfig.StacktraceKey, presetCfg.JSONStacktraceKey, jsonEncoding)
+	setKey(&zcfg.EncoderConfig.CallerKey, presetCfg.JSONCallerKey, jsonEncoding)
+	setKey(&zcfg.EncoderConfig.LevelKey, presetCfg.JSONLevelKey, jsonEncoding)
+	setKey(&zcfg.EncoderConfig.FunctionKey, presetCfg.JSONFunctionKey, jsonEncoding)
+	setKey(&zcfg.EncoderConfig.NameKey, presetCfg.JSONNameKey, jsonEncoding)
+}
+
+func setKey(dst *string, value string, jsonEncoding bool) {
+	switch {
+	case value == omitKeySentinel:
+		*dst = zapcore.OmitKey
+	case jsonEncoding:
+		*dst = value
 	}
 }

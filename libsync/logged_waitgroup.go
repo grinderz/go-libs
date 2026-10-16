@@ -14,18 +14,26 @@ var _ IWaitGroup = (*LoggedWaitGroup)(nil)
 type LoggedWaitGroup struct {
 	sync.WaitGroup
 
-	cfg    *Config
+	cfg *Config
+	// debug is snapshotted at construction, same as in LoggedMutex.
+	debug  bool
 	logger *zap.Logger
 }
 
 func NewLoggedWaitGroup(cfg *Config) *LoggedWaitGroup {
 	return &LoggedWaitGroup{
 		cfg:    cfg,
+		debug:  cfg.Log.Debug,
 		logger: libzap.Logger().With(libzap.FieldPkg("sync_waitgroup")),
 	}
 }
 
 func (wg *LoggedWaitGroup) Wait() {
+	if !wg.debug {
+		wg.WaitGroup.Wait()
+		return
+	}
+
 	start := time.Now()
 
 	wg.WaitGroup.Wait()

@@ -1,9 +1,7 @@
 package libzap
 
 import (
-	"strings"
-
-	"github.com/grinderz/go-libs/liberrors"
+	"github.com/grinderz/go-libs/libenum"
 )
 
 //go:generate go run golang.org/x/tools/cmd/stringer -type=EncodingEnum -linecomment -output encoding_enum_string.go
@@ -15,23 +13,17 @@ const (
 	EncodingJSON    EncodingEnum = iota // json
 )
 
+var encodingNames = map[string]EncodingEnum{ //nolint:gochecknoglobals
+	"console": EncodingConsole,
+	"json":    EncodingJSON,
+}
+
 func (e *EncodingEnum) SetValue(value string) error {
-	encoding := EncodingFromString(value)
-	if encoding == EncodingUnknown {
-		return liberrors.NewInvalidStringEntityError("encoding", value)
-	}
-
-	*e = encoding
-
-	return nil
+	return libenum.SetValue(e, "encoding", value, EncodingFromString)
 }
 
 func (e EncodingEnum) MarshalText() ([]byte, error) {
-	if e == EncodingUnknown {
-		return nil, liberrors.NewInvalidStringEntityError("encoding", e.String())
-	}
-
-	return []byte(e.String()), nil
+	return libenum.MarshalText(e, "encoding")
 }
 
 func (e *EncodingEnum) UnmarshalText(text []byte) error {
@@ -39,12 +31,5 @@ func (e *EncodingEnum) UnmarshalText(text []byte) error {
 }
 
 func EncodingFromString(value string) EncodingEnum {
-	switch strings.ToLower(value) {
-	case "console":
-		return EncodingConsole
-	case "json":
-		return EncodingJSON
-	default:
-		return EncodingUnknown
-	}
+	return libenum.FromString(encodingNames, value)
 }
