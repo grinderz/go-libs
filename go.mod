@@ -9,6 +9,7 @@ require (
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
 	go.uber.org/automaxprocs v1.6.0
 	go.uber.org/zap v1.28.0
+	go.uber.org/zap/exp v0.3.0
 	golang.org/x/tools v0.52.0
 )
 
