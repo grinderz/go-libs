@@ -4,7 +4,7 @@ import (
 	"github.com/grinderz/go-libs/libenum"
 )
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=EngineEnum -linecomment -output engine_enum_string.go
+//go:generate go tool stringer -type=EngineEnum -linecomment -output engine_enum_string.go
 type EngineEnum int //nolint:recvcheck
 
 const (
