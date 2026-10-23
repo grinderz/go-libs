@@ -20,7 +20,9 @@ jobs:
 
       - uses: actions/setup-go@v7
         with:
-          go-version-file: go.mod
+          # the minor: the latest patch of it, the go directive of go.mod is the floor
+          go-version: "1.26"
+          check-latest: true
           cache: true
 
       - uses: astral-sh/setup-uv@v10.3.0
@@ -44,7 +46,9 @@ jobs:
 
       - uses: actions/setup-go@v7
         with:
-          go-version-file: go.mod
+          # the minor: the latest patch of it, the go directive of go.mod is the floor
+          go-version: "1.26"
+          check-latest: true
           cache: true
 
       - name: test with coverage
