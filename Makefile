@@ -53,16 +53,6 @@ endef
 GO_GOLANGCI_LINT_VERSION ?= 2.14.0
 GO_GOLANGCI_LINT_TIMEOUT ?= 5m
 
-# the staticcheck bundled with golangci-lint supports the current go release
-# and fails on a newer one, so a local run uses the toolchain of go.mod's
-# toolchain line. That line is only a minimum, a newer local toolchain still
-# wins without this. In ci setup-go already installs the right toolchain.
-GO_TOOLCHAIN ?= go1.26.9
-
-ifndef CI
-export GOTOOLCHAIN = $(GO_TOOLCHAIN)
-endif
-
 # test
 GO_TEST_COVERAGE_THRESHOLD ?= 48
 GO_GOTESTSUM_VERSION ?= 1.13.0
@@ -83,10 +73,10 @@ go-space := $(go-empty) $(go-empty)
 go-comma := ,
 GO_TEST_TAGS_FLAG = $(if $(strip $(GO_TEST_TAGS)),-tags=$(subst $(go-space),$(go-comma),$(strip $(subst $(go-comma),$(go-space),$(GO_TEST_TAGS)))))
 
-# debian: a glibc run, alpine: a musl/cgo run. The exact patch of
-# GO_TOOLCHAIN keeps the image and the pin above in sync, so go inside the
-# container never downloads another toolchain
-GO_DOCKER_GO_VERSION ?= $(patsubst go%,%,$(GO_TOOLCHAIN))
+# debian: a glibc run, alpine: a musl/cgo run. The go directive of go.mod is
+# the only version floor, any newer go builds the module; the images carry the
+# minor and GOTOOLCHAIN=local keeps go inside them from downloading another
+GO_DOCKER_GO_VERSION ?= 1.26
 GO_DOCKER_DEBIAN_VERSION ?= trixie
 GO_DOCKER_ALPINE_VERSION ?= 3.24
 GO_DOCKER_IMAGE ?= golang:$(GO_DOCKER_GO_VERSION)-$(GO_DOCKER_DEBIAN_VERSION)
@@ -184,6 +174,7 @@ go.format: ## Format the source code
 .PHONY: lint.docker.golangci
 lint.docker.golangci: ## Run golangci-lint in docker
 	docker run -t --rm \
+		-e GOTOOLCHAIN=local \
 		-v $$(pwd):/app \
 		-v ~/.cache/golangci-lint/v$(GO_GOLANGCI_LINT_VERSION):/root/.cache \
 		-w /app \
