@@ -32,6 +32,19 @@
         "toolchain"
       ],
       "enabled": false
+    },
+    {
+      "description": "stringer is a tool directive of go.mod: go get -tool marks golang.org/x/tools indirect (no package imports it) and Renovate skips indirect deps by default; gomodTidy keeps the tool block",
+      "matchManagers": [
+        "gomod"
+      ],
+      "matchDepTypes": [
+        "indirect"
+      ],
+      "matchPackageNames": [
+        "golang.org/x/tools"
+      ],
+      "enabled": true
     }
   ]
 }

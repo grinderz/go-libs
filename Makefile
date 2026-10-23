@@ -257,15 +257,17 @@ test.docker.alpine.%: ## Run make test.$* in the alpine golang image with the mu
 
 
 .PHONY: deps.update.all.patch
-deps.update.all.patch: ## Update all deps to latest patch
+deps.update.all.patch: ## Update all deps to latest patch, the tool directives included
 	go get -u=patch ./...
+	! grep -qE '^tool\b' go.mod || go get -u=patch tool
 	go mod tidy
 
 .PHONY: deps.update.all.latest
-deps.update.all.latest: ## Update all deps to latest
+deps.update.all.latest: ## Update all deps to latest, the tool directives included
 	go get -u ./...
+	! grep -qE '^tool\b' go.mod || go get -u tool
 	go mod tidy
 
 .PHONY: deps.install.tools
-deps.install.tools: ## Install tools from tools.go
-	grep _ tools.go | awk -F'"' '{print $$2}' | xargs -tI % go install %
+deps.install.tools: ## Install the tool directives of go.mod into GOBIN
+	go install tool
