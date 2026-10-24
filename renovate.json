@@ -14,7 +14,8 @@
     "master"
   ],
   "enabledManagers": [
-    "gomod"
+    "gomod",
+    "custom.regex"
   ],
   "branchPrefix": "renovate/",
   "labels": [
@@ -45,6 +46,21 @@
         "golang.org/x/tools"
       ],
       "enabled": true
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "shellcheck release installed by the CI lint job",
+      "managerFilePatterns": [
+        "/^\\.github/workflows/ci\\.yml$/"
+      ],
+      "matchStrings": [
+        "SHELLCHECK_VERSION: (?<currentValue>\\S+)"
+      ],
+      "depNameTemplate": "koalaman/shellcheck",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.+)$"
     }
   ]
 }
