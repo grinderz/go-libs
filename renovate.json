@@ -15,8 +15,13 @@
   ],
   "enabledManagers": [
     "gomod",
+    "github-actions",
+    "pre-commit",
     "custom.regex"
   ],
+  "pre-commit": {
+    "enabled": true
+  },
   "branchPrefix": "renovate/",
   "labels": [
     "dependencies"
@@ -26,6 +31,13 @@
     "gomodUpdateImportPaths"
   ],
   "packageRules": [
+    {
+      "description": "chore for every update: config:recommended prefixes runtime deps with fix otherwise",
+      "matchPackageNames": [
+        "*"
+      ],
+      "semanticCommitType": "chore"
+    },
     {
       "description": "the go and toolchain directives are bumped outside Renovate",
       "matchDepTypes": [
